@@ -562,7 +562,7 @@ specRows.push([String(NI + 1), NK.survey.title, String(NK.survey.items.length), 
 specRows.push([String(NI + 2), "Tes Baca Al-Qur'an & Praktik Ibadah", "5 tugas", "±10′/peserta", NK.quran.relevance]);
 specRows.push([String(NI + 3), "Simulasi Wawancara", `${NK.interview.student.length} + ${NK.interview.parent.length} pertanyaan`, "±15′/peserta", NK.interview.relevance]);
 specRows.push(["", "TOTAL tes tertulis kognitif", String(TOTAL_ITEMS), `${TOTAL_TIME - NK.survey.time}′`, "+ survei karakter 15′"]);
-body.push(table(specRows, [800, 2900, 1000, 1000, 3938], { header: true, size: 18 }));
+body.push(table(specRows, [950, 2750, 1000, 1000, 3938], { header: true, size: 18 }));
 body.push(spacer(160));
 
 body.push(H2("2.2 Karakter Soal: Konteks, Bentuk, dan Level Kognitif"));
@@ -857,6 +857,6 @@ const OUT = path.join(__dirname, "..", "Tryout1_Seleksi_SMA_Unggulan_TP2027-2028
 Packer.toBuffer(doc).then((buf) => {
   fs.writeFileSync(OUT, buf);
   console.log("OK:", OUT);
-  SECTIONS.forEach((s) => { const d = [0, 0, 0, 0]; s.items.forEach((it) => { if (it.q !== undefined) d[it.key]++; }); console.log(s.id, s.count, "butir; kunci A/B/C/D =", d.join("/")); });
+  SECTIONS.forEach((s) => { const d = [0, 0, 0, 0, 0]; s.items.forEach((it) => { if (it.type === "pg") d[it.key]++; }); console.log(s.id, s.count, "butir; kunci PG A/B/C/D/E =", d.join("/"), "| MCMA", s.items.filter((it) => it.type === "mcma").length, "| B/S", s.items.filter((it) => it.type === "bs").length); });
   console.log("Total butir:", TOTAL_ITEMS, "| Total waktu:", TOTAL_TIME, "menit");
 });
