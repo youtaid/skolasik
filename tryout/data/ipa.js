@@ -115,7 +115,18 @@ module.exports = {
         ["Mencampurkan air jeruk dengan air sabun dalam jumlah berapa pun selalu menghasilkan larutan netral.", false],
       ],
       e: "(1) Benar: merah ↔ pH 1–3. (2) Benar: kuning (pH 11–14) lebih basa daripada hijau (pH 8–10). (3) Salah: ungu kemerahan ↔ pH 4–6, bersifat asam (dapat terjadi karena CO₂ atau polutan terlarut). (4) Salah: hasil campuran bergantung pada jumlah asam dan basa; larutan netral hanya bila jumlahnya setara." },
-    { stim: { title: "Bacalah data berikut untuk menjawab soal nomor 17–18.", paras: [
+    { type: "bs", t: "Kimia – percobaan laju reaksi", l: 3, c: true,
+      q: ["Pualam (CaCO₃) direaksikan dengan larutan HCl berlebih. Volume gas yang terkumpul dalam 60 sekon dicatat sebagai berikut.",
+        { table: [["Percobaan", "Bentuk pualam", "Konsentrasi HCl", "Suhu", "Volume gas (60 s)"], ["1", "keping", "1 M", "25 °C", "20 mL"], ["2", "serbuk", "1 M", "25 °C", "45 mL"], ["3", "keping", "2 M", "25 °C", "38 mL"], ["4", "keping", "1 M", "40 °C", "35 mL"]] },
+        "Tentukan Benar atau Salah setiap pernyataan berikut."],
+      s: [
+        ["Perbandingan percobaan 1 dan 2 menunjukkan pengaruh luas permukaan bidang sentuh terhadap kecepatan reaksi.", true],
+        ["Percobaan 3 dan 4 dapat dipakai untuk menyimpulkan pengaruh suhu terhadap kecepatan reaksi.", false],
+        ["Data percobaan 1 dan 4 menunjukkan bahwa kenaikan suhu mempercepat reaksi.", true],
+        ["Gas yang terkumpul dalam percobaan ini adalah gas hidrogen.", false],
+      ],
+      e: "(1) Benar: hanya bentuk pualam yang berbeda; serbuk (luas permukaan besar) menghasilkan gas lebih cepat. (2) Salah: percobaan 3 dan 4 berbeda pada dua variabel (konsentrasi dan suhu), sehingga bukan uji yang adil. (3) Benar: hanya suhu yang berbeda; 35 mL > 20 mL. (4) Salah: CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂; gasnya karbon dioksida." },
+    { stim: { title: "Bacalah data berikut untuk menjawab soal nomor 19–20.", paras: [
       "Tabel berikut menunjukkan sifat lima zat pada tekanan 1 atmosfer.",
       { table: [["Zat", "Titik leleh (°C)", "Titik didih (°C)", "Daya hantar listrik"], ["P", "−39", "357", "Menghantar dalam wujud padat dan cair"], ["Q", "801", "1.413", "Tidak menghantar saat padat; menghantar saat dilelehkan"], ["R", "0", "100", "Tidak menghantar (murni)"], ["S", "−218", "−183", "Tidak menghantar"], ["T", "1.538", "2.862", "Menghantar dalam wujud padat dan cair"]] },
     ] } },
@@ -132,17 +143,6 @@ module.exports = {
         ["Pada suhu 1.500 °C, zat T berwujud cair.", false],
       ],
       e: "(1) Benar: senyawa ion padat tidak menghantar karena ionnya tidak bebas bergerak, tetapi menghantar saat meleleh. (2) Benar: 150 °C di atas titik didih R (100 °C). (3) Benar: −200 °C berada di antara titik leleh (−218 °C) dan titik didih (−183 °C) S. (4) Salah: 1.500 °C masih di bawah titik leleh T (1.538 °C), jadi T masih padat." },
-    { type: "bs", t: "Kimia – percobaan laju reaksi", l: 3, c: true,
-      q: ["Pualam (CaCO₃) direaksikan dengan larutan HCl berlebih. Volume gas yang terkumpul dalam 60 sekon dicatat sebagai berikut.",
-        { table: [["Percobaan", "Bentuk pualam", "Konsentrasi HCl", "Suhu", "Volume gas (60 s)"], ["1", "keping", "1 M", "25 °C", "20 mL"], ["2", "serbuk", "1 M", "25 °C", "45 mL"], ["3", "keping", "2 M", "25 °C", "38 mL"], ["4", "keping", "1 M", "40 °C", "35 mL"]] },
-        "Tentukan Benar atau Salah setiap pernyataan berikut."],
-      s: [
-        ["Perbandingan percobaan 1 dan 2 menunjukkan pengaruh luas permukaan bidang sentuh terhadap kecepatan reaksi.", true],
-        ["Percobaan 3 dan 4 dapat dipakai untuk menyimpulkan pengaruh suhu terhadap kecepatan reaksi.", false],
-        ["Data percobaan 1 dan 4 menunjukkan bahwa kenaikan suhu mempercepat reaksi.", true],
-        ["Gas yang terkumpul dalam percobaan ini adalah gas hidrogen.", false],
-      ],
-      e: "(1) Benar: hanya bentuk pualam yang berbeda; serbuk (luas permukaan besar) menghasilkan gas lebih cepat. (2) Salah: percobaan 3 dan 4 berbeda pada dua variabel (konsentrasi dan suhu), sehingga bukan uji yang adil. (3) Benar: hanya suhu yang berbeda; 35 mL > 20 mL. (4) Salah: CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂; gasnya karbon dioksida." },
 
     { part: "Biologi (soal 21–30)." },
     { t: "Biologi – sistem pencernaan", l: 3, c: true,
