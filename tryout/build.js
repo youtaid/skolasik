@@ -64,8 +64,10 @@ const FONT = "Arial";
 const AR_FONT = "Traditional Arabic";
 const W = 9638; // lebar area isi A4 dengan margin 2 cm (DXA)
 const NAVY = "1F3864", BLUE = "2E75B6", LIGHT = "EAF1FB", GREY = "F2F2F2", GOLD = "FFF4D6";
-const LETTERS = ["A", "B", "C", "D"];
-const LEVEL_NAME = { 1: "L1 – Pengetahuan & Pemahaman", 2: "L2 – Aplikasi", 3: "L3 – Penalaran (HOTS)" };
+const LETTERS = ["A", "B", "C", "D", "E"];
+const FORMAT = { pg: "PG", mcma: "PG Kompleks (MCMA)", bs: "Benar/Salah" };
+const { check } = require("./check.js");
+const LEVEL_NAME = { 1: "L1 – Pengetahuan & Pemahaman", 2: "L2 – Aplikasi", 3: "L3 – Penalaran/Analisis (HOTS)" };
 
 // ---------- teks & run (mendukung aksara Arab RTL) ----------
 const AR = "؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿";
@@ -148,27 +150,43 @@ function shuffle(arr, rnd) { const a = arr.slice(); for (let i = a.length - 1; i
 function prepare(sec, seed) {
   const rnd = mulberry32(seed);
   const qs = sec.items.filter((it) => it.q !== undefined);
-  const free = qs.filter((q) => !q.keep).length;
+  const pgCount = qs.filter((q) => (q.type || "pg") === "pg").length;
   let positions = [];
-  while (positions.length < free) positions = positions.concat(shuffle([0, 1, 2, 3], rnd));
+  while (positions.length < pgCount) positions = positions.concat(shuffle([0, 1, 2, 3, 4], rnd));
   let k = 0, n = 0;
   for (const it of sec.items) {
     if (it.q === undefined) continue;
-    it.no = ++n;
-    if (it.keep) { it.opts = it.o; it.key = it.a; continue; }
-    const pos = positions[k++];
-    const d = shuffle(it.o.slice(1), rnd);
-    d.splice(pos, 0, it.o[0]);
-    it.opts = d; it.key = pos;
+    it.no = ++n; it.type = it.type || "pg";
+    if (it.type === "pg") {
+      const pos = positions[k++];
+      const d = shuffle(it.o.slice(1), rnd);
+      d.splice(pos, 0, it.o[0]);
+      it.opts = d; it.key = pos; it.keyStr = LETTERS[pos];
+    } else if (it.type === "mcma") {
+      const idx = shuffle([0, 1, 2, 3, 4], rnd);
+      it.opts = idx.map((i) => it.o[i]);
+      it.keys = idx.map((orig, np) => (it.a.includes(orig) ? np : -1)).filter((x) => x >= 0).sort();
+      it.keyStr = it.keys.map((i) => LETTERS[i]).join(", ");
+    } else {
+      it.keyStr = it.s.map((r) => (r[1] ? "B" : "S")).join("–");
+    }
   }
   sec.count = n;
-  // rentang nomor untuk stimulus
   let pend = null;
   for (const it of sec.items) { if (it.stim) pend = it; else if (it.q !== undefined && pend) { pend.from = it.no; pend = null; } }
 }
+// validasi kriteria (kontekstual ≥70%, L3 ≥70%, variasi bentuk, 5 opsi) sebelum build
+const STATS = {};
+["tpa", "bindo", "mat", "ipa", "bing", "ips", "pai", "arab", "intl"].forEach((f) => {
+  const r = check(path.join(__dirname, "data", `${f}.js`));
+  if (r.errs.length) throw new Error(`Validasi ${f}.js gagal:\n  ` + r.errs.join("\n  "));
+  STATS[r.sec.id] = r;
+});
 SECTIONS.forEach((s, i) => prepare(s, 20270101 + i * 97));
 const TOTAL_ITEMS = SECTIONS.reduce((a, s) => a + s.count, 0);
 const HOTS_PCT = Math.round(SECTIONS.reduce((a, s) => a + s.items.filter((it) => it.q !== undefined && it.l === 3).length, 0) / TOTAL_ITEMS * 100);
+const CTX_PCT = Math.round(SECTIONS.reduce((a, s) => a + s.items.filter((it) => it.q !== undefined && it.c).length, 0) / TOTAL_ITEMS * 100);
+const FMT_TOTAL = { pg: 0, mcma: 0, bs: 0 }; SECTIONS.forEach((s) => s.items.forEach((it) => { if (it.q !== undefined) FMT_TOTAL[it.type]++; }));
 const TOTAL_TIME = SECTIONS.reduce((a, s) => a + s.time, 0) + NK.survey.time;
 
 // ---------- render butir soal ----------
@@ -176,47 +194,61 @@ const QIND = 454;
 function renderOptions(it) {
   const opts = it.opts;
   const anyAr = opts.some((o) => AR_TEST.test(o));
-  const maxLen = Math.max(...opts.map((o) => o.length));
+  const maxLen = Math.max(...opts.map((o) => String(o).length));
+  const box_ = it.type === "mcma" ? "☐ " : "";
+  const lab = (i) => new TextRun({ text: `${box_}${LETTERS[i]}. `, bold: true, font: FONT, size: 22 });
+  const tab = () => new TextRun({ text: "	", font: FONT, size: 22 });
   const out = [];
-  if (!anyAr && maxLen <= 14) {
-    const stops = [2750, 5050, 7350].map((p) => ({ type: TabStopType.LEFT, position: p }));
+  if (!anyAr && maxLen <= 9) {
+    const stops = [1, 2, 3, 4].map((i) => ({ type: TabStopType.LEFT, position: QIND + i * 1830 }));
     const ch = [];
-    opts.forEach((o, i) => { if (i) ch.push(new TextRun({ text: "\t", font: FONT, size: 22 })); ch.push(new TextRun({ text: `${LETTERS[i]}. `, bold: true, font: FONT, size: 22 }), ...runs(o)); });
+    opts.forEach((o, i) => { if (i) ch.push(tab()); ch.push(lab(i), ...runs(o)); });
     out.push(P(ch, { indent: { left: QIND }, tabs: stops, after: 160, keepLines: true }));
-  } else if (maxLen <= 36 || anyAr) {
+  } else if (maxLen <= 34 || anyAr) {
     const stops = [{ type: TabStopType.LEFT, position: 5050 }];
-    for (let r = 0; r < 2; r++) {
+    for (let r = 0; r < 3; r++) {
       const ch = [];
-      [0, 1].forEach((c) => { const i = r * 2 + c; if (c) ch.push(new TextRun({ text: "\t", font: FONT, size: 22 })); ch.push(new TextRun({ text: `${LETTERS[i]}. `, bold: true, font: FONT, size: 22 }), ...runs(opts[i])); });
-      out.push(P(ch, { indent: { left: QIND }, tabs: stops, after: r ? 160 : 40, keepNext: r === 0, keepLines: true }));
+      [0, 1].forEach((c) => { const i = r * 2 + c; if (i > 4) return; if (c) ch.push(tab()); ch.push(lab(i), ...runs(opts[i])); });
+      out.push(P(ch, { indent: { left: QIND }, tabs: stops, after: r === 2 ? 160 : 40, keepNext: r < 2, keepLines: true }));
     }
   } else {
-    opts.forEach((o, i) => out.push(P([new TextRun({ text: `${LETTERS[i]}.\t`, bold: true, font: FONT, size: 22 }), ...runs(o)],
-      { indent: { left: QIND + 397, hanging: 397 }, tabs: [{ type: TabStopType.LEFT, position: QIND + 397 }], after: i === 3 ? 160 : 30, keepNext: i < 3, keepLines: true })));
+    const ind = QIND + (box_ ? 680 : 397);
+    opts.forEach((o, i) => out.push(P([lab(i), tab(), ...runs(o)],
+      { indent: { left: ind, hanging: ind - QIND }, tabs: [{ type: TabStopType.LEFT, position: ind }], after: i === 4 ? 160 : 30, keepNext: i < 4, keepLines: true })));
   }
   return out;
 }
+function renderBS(it) {
+  const wNo = 500, wB = 900, wS = 900, wT = W - QIND - wNo - wB - wS;
+  const rows = [["No", "Pernyataan", "Benar", "Salah"], ...it.s.map((r, i) => [String(i + 1), r[0], "☐", "☐"])];
+  return [new Table({
+    width: { size: W - QIND, type: WidthType.DXA }, columnWidths: [wNo, wT, wB, wS], layout: TableLayoutType.FIXED, indent: { size: QIND, type: WidthType.DXA },
+    rows: rows.map((r, ri) => new TableRow({ cantSplit: true, children: r.map((c, j) => cell(c, [wNo, wT, wB, wS][j], { size: 19, bold: ri === 0, fill: ri === 0 ? "DCE6F2" : undefined, align: j === 1 ? undefined : AlignmentType.CENTER })) })),
+  }), spacer(160)];
+}
+const FORMAT_HINT = { mcma: "Pilihan ganda kompleks: pilih SEMUA jawaban yang benar (lebih dari satu).", bs: "Tentukan Benar atau Salah untuk setiap pernyataan." };
 function renderQuestion(it) {
   const out = [];
   const parts = Array.isArray(it.q) ? it.q : [it.q];
   parts.forEach((p, idx) => {
     if (p && p.table) {
-      const cols = p.table[0].length; const cw = Math.min(1100, Math.floor((W - QIND) / cols));
+      const cols = p.table[0].length; const cw = Math.min(1500, Math.floor((W - QIND) / cols));
       out.push(new Table({
         width: { size: cw * cols, type: WidthType.DXA }, columnWidths: Array(cols).fill(cw), layout: TableLayoutType.FIXED, indent: { size: QIND, type: WidthType.DXA },
-        rows: p.table.map((r) => new TableRow({ children: r.map((c) => cell(c, cw, { size: 20, align: AlignmentType.CENTER })) })),
+        rows: p.table.map((r, ri) => new TableRow({ children: r.map((c) => cell(c, cw, { size: 19, bold: ri === 0, fill: ri === 0 ? "DCE6F2" : undefined, align: AlignmentType.CENTER })) })),
       }));
       out.push(spacer(60));
       return;
     }
-    if (idx === 0) out.push(P([new TextRun({ text: `${it.no}.\t`, bold: true, font: FONT, size: 22 }), ...runs(p)], { indent: { left: QIND, hanging: QIND }, tabs: [{ type: TabStopType.LEFT, position: QIND }], after: 60, keepNext: true }));
+    if (idx === 0) out.push(P([new TextRun({ text: `${it.no}.	`, bold: true, font: FONT, size: 22 }), ...runs(p)], { indent: { left: QIND, hanging: QIND }, tabs: [{ type: TabStopType.LEFT, position: QIND }], after: 60, keepNext: true }));
     else out.push(P(p, { indent: { left: QIND }, after: 60, keepNext: true }));
   });
-  return out.concat(renderOptions(it));
+  if (FORMAT_HINT[it.type]) out.push(P(FORMAT_HINT[it.type], { italics: true, bold: true, size: 18, color: BLUE, indent: { left: QIND }, after: 60, keepNext: true }));
+  return out.concat(it.type === "bs" ? renderBS(it) : renderOptions(it));
 }
 function renderStim(st, sec) {
   const last = (() => { let seen = false, cnt = 0; for (const it of sec.items) { if (it === st) { seen = true; continue; } if (!seen) continue; if (it.stim || it.part) break; if (it.q !== undefined) cnt++; } return st.from + cnt - 1; })();
-  const ch = [P(st.stim.title.replace(/nomor \d+–\d+/, `nomor ${st.from}–${last}`), { bold: true, size: 20, color: NAVY, after: 80 })];
+  const ch = [P(st.stim.title.replace(/(nomor|questions) \d+\s*[–-]\s*\d+/, `$1 ${st.from}–${last}`), { bold: true, size: 20, color: NAVY, after: 80 })];
   st.stim.paras.forEach((t) => {
     if (t && t.table) {
       const cols = t.table[0].length; const cw = Math.floor((W - 400) / cols);
@@ -388,7 +420,8 @@ body.push(P("Disusun berdasarkan analisis sistem dan materi seleksi:", { size: 2
 body.push(P("MAN Insan Cendekia  •  SMA Labschool UNJ  •  SMAN Unggulan M.H. Thamrin  •  SMA Islam Al Azhar", { bold: true, size: 22, align: AlignmentType.CENTER, after: 480 }));
 body.push(table([
   ["Sasaran", "Siswa kelas IX SMP/MTs (calon peserta seleksi TP 2027/2028)"],
-  ["Isi paket", `${SECTIONS.length} subtes kognitif (${TOTAL_ITEMS} butir pilihan ganda + ${INTL.essays.length} uraian model PISA) + 3 instrumen non-kognitif`],
+  ["Isi paket", `${SECTIONS.length} subtes kognitif (${TOTAL_ITEMS} butir objektif + ${INTL.essays.length} uraian model PISA) + 3 instrumen non-kognitif`],
+  ["Karakter soal", `${CTX_PCT}% kontekstual • ${HOTS_PCT}% level analisis/penalaran (L3) • bentuk PG, PG Kompleks (MCMA), dan Benar/Salah • setiap PG/MCMA 5 opsi (4 pengecoh)`],
   ["Standar acuan", "Profil seleksi 4 sekolah + kualifikasi internasional PISA 2025 & TIMSS 2023 (domain kognitif, estimasi level PISA)"],
   ["Total waktu tes tertulis", `${TOTAL_TIME} menit (disarankan dalam 2 hari) + tes baca Al-Qur'an & wawancara individual`],
   ["Kelengkapan", "Analisis seleksi, kisi-kisi, naskah soal, lembar jawaban, kunci & pembahasan, pedoman skor"],
@@ -415,8 +448,8 @@ body.push(spacer(200));
 body.push(box([
   P("Cara menggunakan paket ini", { bold: true, color: NAVY, after: 80 }),
   bullet("Guru/pengelola bimbingan: pelajari Bagian I–II untuk memahami arah seleksi, lalu gandakan Bagian III–V untuk peserta. Bagian VI–VII disimpan terpisah sebagai dokumen penilai.", 0, { size: 20 }),
-  bullet("Peserta dapat mengikuti paket lengkap (simulasi semua sekolah) atau paket modular sesuai sekolah tujuan (lihat Bagian II.3).", 0, { size: 20 }),
-  bullet("Posisi kunci jawaban telah diacak dan diseimbangkan (A–D) sehingga tidak dapat ditebak dari pola.", 0, { size: 20 }),
+  bullet("Peserta dapat mengikuti paket lengkap (simulasi semua sekolah) atau paket modular sesuai sekolah tujuan (lihat Bagian II.4).", 0, { size: 20 }),
+  bullet("Posisi kunci PG diacak dan diseimbangkan (A–E); opsi MCMA juga diacak sehingga kunci tidak dapat ditebak dari pola.", 0, { size: 20 }),
   bullet("Butir dapat diunggah ke CBT/LMS sekolah agar pengalaman tes mendekati format CBT (MAN IC) dan CAT (Labschool).", 0, { size: 20 }),
 ]));
 
@@ -532,14 +565,28 @@ specRows.push(["", "TOTAL tes tertulis kognitif", String(TOTAL_ITEMS), `${TOTAL_
 body.push(table(specRows, [800, 2900, 1000, 1000, 3938], { header: true, size: 18 }));
 body.push(spacer(160));
 
-body.push(H2("2.2 Distribusi Level Kognitif"));
+body.push(H2("2.2 Karakter Soal: Konteks, Bentuk, dan Level Kognitif"));
+body.push(P(`Sesuai spesifikasi paket, minimal 70% butir setiap subtes bersifat kontekstual dan minimal 70% berada pada level analisis/penalaran (L3). Setiap subtes juga memadukan tiga bentuk soal yang lazim dipakai pada asesmen berbasis komputer (AKM/ANBK) dan PISA. Kriteria ini diperiksa otomatis oleh validator (check.js) setiap kali dokumen dibangun.`, { size: 20, align: AlignmentType.JUSTIFIED }));
+const fmtRows = [["Subtes", "Butir", "PG", "MCMA", "Benar/ Salah", "% Konteks", "% L3"]];
+SECTIONS.forEach((s, i) => { const r = STATS[s.id]; fmtRows.push([`${i + 1}. ${s.title}`, String(r.n), String(r.cnt.pg), String(r.cnt.mcma), String(r.cnt.bs), `${r.pct(r.ctx)}%`, `${r.pct(r.l3)}%`]); });
+fmtRows.push(["TOTAL", String(TOTAL_ITEMS), String(FMT_TOTAL.pg), String(FMT_TOTAL.mcma), String(FMT_TOTAL.bs), `${CTX_PCT}%`, `${HOTS_PCT}%`]);
+body.push(table(fmtRows, [3738, 900, 900, 900, 1000, 1100, 1100], { header: true, center: true, size: 18 }));
+body.push(spacer(80));
+body.push(table([
+  ["Bentuk soal", "Cara menjawab", "Penskoran utama", "Fungsi diagnostik"],
+  ["PG (pilihan ganda tunggal)", "Pilih satu jawaban paling tepat dari 5 opsi (1 kunci + 4 pengecoh)", "Benar 1, salah/kosong 0", "Mengukur ketepatan memilih solusi terbaik; pengecoh disusun dari miskonsepsi umum"],
+  ["PG Kompleks (MCMA)", "Pilih semua jawaban benar (2–3 dari 5 opsi)", "1 jika seluruh pilihan tepat tanpa salah pilih", "Mengungkap pemahaman parsial dan kecenderungan menebak"],
+  ["Benar/Salah (PG kompleks kategori)", "Tentukan B atau S untuk 4–5 pernyataan", "1 jika seluruh pernyataan tepat", "Memeriksa ketelitian menganalisis setiap klaim/data"],
+], [2200, 2700, 2000, 2738], { header: true, size: 18, boldFirstCol: true }));
+
+body.push(H2("2.3 Distribusi Level Kognitif"));
 const lv = SECTIONS.map((s) => { const c = { 1: 0, 2: 0, 3: 0 }; s.items.forEach((it) => { if (it.q !== undefined) c[it.l]++; }); return [s, c]; });
 const tot = { 1: 0, 2: 0, 3: 0 }; lv.forEach(([, c]) => [1, 2, 3].forEach((k) => (tot[k] += c[k])));
 const lvRows = [["Subtes", "L1 Pemahaman", "L2 Aplikasi", "L3 Penalaran", "% L3 (HOTS)"]];
 lv.forEach(([s, c]) => lvRows.push([s.title, String(c[1]), String(c[2]), String(c[3]), `${Math.round((c[3] / s.count) * 100)}%`]));
 lvRows.push(["TOTAL", String(tot[1]), String(tot[2]), String(tot[3]), `${Math.round((tot[3] / TOTAL_ITEMS) * 100)}%`]);
 body.push(table(lvRows, [3838, 1450, 1450, 1450, 1450], { header: true, center: true, size: 18 }));
-body.push(P(`Proporsi keseluruhan: L1 ${Math.round((tot[1] / TOTAL_ITEMS) * 100)}% • L2 ${Math.round((tot[2] / TOTAL_ITEMS) * 100)}% • L3 ${Math.round((tot[3] / TOTAL_ITEMS) * 100)}%. Komposisi ini meniru karakter seleksi unggulan yang menempatkan penalaran dan literasi sebagai pembeda utama.`, { size: 19, before: 80 }));
+body.push(P(`Proporsi keseluruhan: L1 ${Math.round((tot[1] / TOTAL_ITEMS) * 100)}% • L2 ${Math.round((tot[2] / TOTAL_ITEMS) * 100)}% • L3 ${Math.round((tot[3] / TOTAL_ITEMS) * 100)}%. Komposisi ini sengaja menempatkan soal analisis/penalaran sebagai mayoritas karena seleksi unggulan menjadikannya pembeda utama.`, { size: 19, before: 80 }));
 body.push(H3("Perbandingan dengan target domain kognitif TIMSS 2023 (kelas 8)"));
 const pct = (c, n) => `${Math.round((c / n) * 100)}%`;
 const cmpRow = (label, id, target) => { const [sec, c] = lv.find(([s]) => s.id === id); return [label, `${pct(c[1], sec.count)} : ${pct(c[2], sec.count)} : ${pct(c[3], sec.count)}`, target]; };
@@ -550,47 +597,47 @@ body.push(table([
   cmpRow(`Literasi Internasional (Subtes ${NI})`, "INT", "– (model PISA)"),
   ["Seluruh paket", `${pct(tot[1], TOTAL_ITEMS)} : ${pct(tot[2], TOTAL_ITEMS)} : ${pct(tot[3], TOTAL_ITEMS)}`, "–"],
 ], [2600, 4238, 2800], { header: true, center: true, size: 18, boldFirstCol: true }));
-body.push(P("Subtes Matematika sengaja diberi porsi penalaran lebih besar daripada TIMSS karena seleksi sekolah unggulan menyaring siswa di atas rata-rata; porsi Mengetahui yang kecil menjadi penanda bahwa hafalan rumus saja tidak cukup. Subtes IPA mendekati proporsi TIMSS dengan penekanan pada penerapan konsep.", { size: 19, before: 60, align: AlignmentType.JUSTIFIED }));
+body.push(P("Porsi Menalar pada paket ini (±70% ke atas) jauh melampaui target TIMSS (25–30%). Hal ini disengaja: TIMSS memotret seluruh populasi siswa, sedangkan tryout ini menyiapkan siswa untuk seleksi sekolah unggulan yang menyaring kelompok teratas. Butir Mengetahui dan Menerapkan tetap disisakan sebagai jangkar untuk mendiagnosis penguasaan konsep dasar.", { size: 19, before: 60, align: AlignmentType.JUSTIFIED }));
 
-body.push(H2("2.3 Paket Modular & Jadwal Pelaksanaan"));
+body.push(H2("2.4 Paket Modular & Jadwal Pelaksanaan"));
 body.push(table([["Sekolah tujuan", "Subtes/instrumen yang dikerjakan"], ...BLUEPRINT_PROFILES], [2400, W - 2400], { header: true, size: 19, boldFirstCol: true }));
 body.push(spacer(140));
-body.push(table([
-  ["Hari/Sesi", "Kegiatan", "Durasi"],
-  ["Hari 1 – Sesi 1", "Subtes 1: TPA", "60 menit"],
-  ["Hari 1 – Sesi 2", "Subtes 2: Literasi Membaca & Bahasa Indonesia", "30 menit"],
-  ["", "Istirahat", "15 menit"],
-  ["Hari 1 – Sesi 3", "Subtes 3: Matematika", "50 menit"],
-  ["Hari 1 – Sesi 4", "Subtes 4: IPA", "60 menit"],
-  ["Hari 2 – Sesi 5", "Subtes 5: Bahasa Inggris", "40 menit"],
-  ["Hari 2 – Sesi 6", "Subtes 6: IPS (peminatan)", "25 menit"],
-  ["Hari 2 – Sesi 7", "Subtes 7: PAI & Literasi Keislaman", "25 menit"],
-  ["Hari 2 – Sesi 8", "Subtes 8: Bahasa Arab", "25 menit"],
-  ["Hari 2 – Sesi 9", `Subtes ${NI}: Literasi Standar Internasional (model PISA 2025 & TIMSS)`, `${INTL.time} menit`],
-  ["Hari 2 – Sesi 10", "Survei Karakter", "15 menit"],
-  ["Hari 2 – Individual", "Tes baca Al-Qur'an (±10 menit) & simulasi wawancara (±15 menit) per peserta", "terjadwal"],
-], [2400, 5638, 1600], { header: true, size: 19 }));
+const sched = [["Hari/Sesi", "Kegiatan", "Durasi"]];
+let sesi = 0;
+SECTIONS.forEach((x, i) => {
+  if (i === 2) sched.push(["", "Istirahat", "15 menit"]);
+  if (i === 6) sched.push(["", "Istirahat", "15 menit"]);
+  sched.push([`Hari ${i < 4 ? 1 : 2} – Sesi ${++sesi}`, `Subtes ${i + 1}: ${x.title}`, `${x.time} menit`]);
+});
+sched.push([`Hari 2 – Sesi ${++sesi}`, "Survei Karakter", `${NK.survey.time} menit`]);
+sched.push(["Hari 2 – Individual", "Tes baca Al-Qur'an (±10 menit) & simulasi wawancara (±15 menit) per peserta", "terjadwal"]);
+const d1 = SECTIONS.slice(0, 4).reduce((a, x) => a + x.time, 0), d2 = SECTIONS.slice(4).reduce((a, x) => a + x.time, 0) + NK.survey.time;
+body.push(table(sched, [2400, 5638, 1600], { header: true, size: 19 }));
+body.push(P(`Total waktu tes tertulis: Hari 1 = ${d1} menit, Hari 2 = ${d2} menit (belum termasuk istirahat).`, { size: 18, italics: true, before: 60 }));
 
-body.push(H2("2.4 Tata Tertib & Petunjuk Umum Peserta"));
+body.push(H2("2.5 Tata Tertib & Petunjuk Umum Peserta"));
 [
   "Isilah identitas pada lembar jawaban sebelum tes dimulai.",
-  "Setiap soal memiliki empat pilihan jawaban (A, B, C, D) dan hanya satu jawaban yang paling tepat.",
-  "Jawaban benar bernilai 1, jawaban salah atau kosong bernilai 0 (tanpa pengurangan). Usahakan menjawab semua soal.",
+  "Soal PG: pilih SATU jawaban paling tepat dari lima pilihan (A–E).",
+  "Soal PG Kompleks (MCMA), bertanda “pilih SEMUA jawaban yang benar”: jawaban benar lebih dari satu; tandai setiap pilihan yang benar.",
+  "Soal Benar/Salah: tentukan Benar (B) atau Salah (S) untuk setiap pernyataan.",
+  "Setiap soal bernilai 1 bila dijawab tepat seluruhnya; jawaban salah, tidak lengkap, atau kosong bernilai 0 (tanpa pengurangan). Usahakan menjawab semua soal.",
   `Subtes ${NI} juga memuat ${INTL.essays.length} soal uraian. Tulis jawaban uraian secara lengkap dan runtut pada lembar jawaban uraian; jawaban dinilai dengan kode 2 (penuh), 1 (sebagian), atau 0.`,
   "Kerjakan sesuai alokasi waktu setiap subtes; tidak diperkenankan kembali ke subtes yang waktunya telah habis.",
   "Kalkulator, gawai, dan catatan tidak diperkenankan. Gunakan kertas coretan yang disediakan.",
   "Kerjakan dengan jujur—hasil tryout dipakai untuk memetakan kekuatan dan kelemahan, bukan untuk menghakimi.",
 ].forEach((t) => body.push(numbered(t, "rules")));
 
-body.push(H2("2.5 Kisi-kisi per Subtes"));
+body.push(H2("2.6 Kisi-kisi per Subtes"));
 SECTIONS.forEach((s, i) => {
   body.push(H3(`Subtes ${i + 1}: ${s.title}`));
   const groups = new Map();
   s.items.forEach((it) => { if (it.q === undefined) return; if (!groups.has(it.t)) groups.set(it.t, []); groups.get(it.t).push(it); });
-  const rows = [["Materi / Indikator", "Nomor soal", "Jml", "Level", "Domain TIMSS", "Kualifikasi internasional"]];
-  for (const [t, its] of groups) rows.push([t, its.map((x) => x.no).join(", "), String(its.length), [...new Set(its.map((x) => `L${x.l}`))].join("/"), [...new Set(its.map((x) => TIMSS_SHORT[x.l]))].join("/"), [...new Set(its.map((x) => intlTag(s, x)))].join(" | ")]);
-  if (s.essays) s.essays.forEach((e, k) => rows.push([`Uraian – ${e.unit}`, `U${k + 1}`, "1", `L${e.l}`, TIMSS_SHORT[e.l], `${e.x.fw} • ${e.x.proc}`]));
-  body.push(table(rows, [2700, 1300, 550, 750, 1300, 3038], { header: true, size: 16, zebra: true }));
+  const rows = [["Materi / Indikator", "No.", "Bentuk", "Level", "Konteks", "Domain TIMSS", "Kualifikasi internasional"]];
+  const uniq = (arr) => [...new Set(arr)].join("/");
+  for (const [t, its] of groups) rows.push([t, its.map((x) => x.no).join(", "), uniq(its.map((x) => FORMAT[x.type])), uniq(its.map((x) => `L${x.l}`)), uniq(its.map((x) => (x.c ? "Ya" : "Tidak"))), uniq(its.map((x) => TIMSS_SHORT[x.l])), uniq(its.map((x) => intlTag(s, x)))]);
+  if (s.essays) s.essays.forEach((e, k) => rows.push([`Uraian – ${e.unit}`, `U${k + 1}`, "Uraian", `L${e.l}`, "Ya", TIMSS_SHORT[e.l], `${e.x.fw} • ${e.x.proc}`]));
+  body.push(table(rows, [2300, 800, 1150, 650, 800, 1100, 2838], { header: true, size: 15, zebra: true }));
   body.push(spacer(120));
 });
 
@@ -598,7 +645,7 @@ SECTIONS.forEach((s, i) => {
 body.push(H1("Bagian III — Naskah Soal"));
 body.push(box([
   P("PETUNJUK UMUM", { bold: true, color: NAVY, after: 60 }),
-  P(`Paket ini terdiri atas ${SECTIONS.length} subtes dengan total ${TOTAL_ITEMS} soal pilihan ganda dan ${INTL.essays.length} soal uraian (Subtes ${NI}). Nomor soal dimulai dari 1 pada setiap subtes. Tandai jawaban pada Lembar Jawaban (Bagian V) sesuai nomor dan subtes. Selamat mengerjakan—bismillah, semoga sukses!`, { size: 20, after: 0 }),
+  P(`Paket ini terdiri atas ${SECTIONS.length} subtes dengan total ${TOTAL_ITEMS} soal objektif (PG, PG Kompleks/MCMA, dan Benar/Salah) dan ${INTL.essays.length} soal uraian (Subtes ${NI}). Nomor soal dimulai dari 1 pada setiap subtes. Tandai jawaban pada Lembar Jawaban (Bagian V) sesuai nomor dan subtes. Selamat mengerjakan—bismillah, semoga sukses!`, { size: 20, after: 0 }),
 ]));
 SECTIONS.forEach((s, i) => {
   if (i > 0) body.push(new Paragraph({ children: [new PageBreak()] }));
@@ -650,17 +697,19 @@ body.push(P("Nilai wawancara = (jumlah skor ÷ 20) × 100.", { size: 19, before:
 // BAGIAN V — Lembar Jawaban
 body.push(H1("Bagian V — Lembar Jawaban"));
 body.push(table([["Nama", "", "No. Peserta", ""], ["Asal Sekolah", "", "Sekolah Tujuan", ""]], [1600, 3219, 1600, 3219], { size: 19, firstColFill: false }));
-body.push(P("Hitamkan/silang satu huruf pilihan jawaban untuk setiap nomor.", { size: 18, italics: true, before: 80 }));
+body.push(P("PG: lingkari SATU huruf. MCMA (☐): centang SEMUA huruf yang benar. Benar/Salah: lingkari B atau S untuk setiap pernyataan (nomor pernyataan 1–5).", { size: 18, italics: true, before: 80 }));
 SECTIONS.forEach((s, i) => {
   body.push(P(`Subtes ${i + 1} — ${s.title} (${s.count} soal)`, { bold: true, size: 19, color: NAVY, before: 120, after: 60, keepNext: true }));
-  const per = 5; const rows = [];
-  const nRows = Math.ceil(s.count / per);
+  const qs = s.items.filter((it) => it.q !== undefined);
+  const sheetCell = (it) => it.type === "pg" ? `${it.no}.  (A) (B) (C) (D) (E)` : it.type === "mcma" ? `${it.no}. ☐A ☐B ☐C ☐D ☐E` : `${it.no}. ` + it.s.map((_, j) => `${j + 1}:B/S`).join("  ");
+  const per = 4; const rows = [];
+  const nRows = Math.ceil(qs.length / per);
   for (let r = 0; r < nRows; r++) {
     const row = [];
-    for (let c = 0; c < per; c++) { const n = c * nRows + r + 1; row.push(n <= s.count ? `${String(n).padStart(2, " ")}.  (A) (B) (C) (D)` : ""); }
+    for (let c = 0; c < per; c++) { const it = qs[c * nRows + r]; row.push(it ? sheetCell(it) : ""); }
     rows.push(row);
   }
-  body.push(table(rows, [1927, 1927, 1928, 1928, 1928], { size: 16 }));
+  body.push(table(rows, [2409, 2409, 2410, 2410], { size: 16 }));
   if (s.essays) {
     body.push(P(`Lembar Jawaban Uraian — Subtes ${i + 1}`, { bold: true, size: 19, color: NAVY, before: 160, after: 60, keepNext: true }));
     s.essays.forEach((e, k) => body.push(new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: [W], layout: TableLayoutType.FIXED, rows: [
@@ -678,17 +727,17 @@ body.push(H2("6.1 Kunci Jawaban Ringkas"));
 SECTIONS.forEach((s, i) => {
   body.push(P(`Subtes ${i + 1} — ${s.title}`, { bold: true, size: 19, color: NAVY, before: 100, after: 40, keepNext: true }));
   const qs = s.items.filter((it) => it.q !== undefined);
-  const rows = []; for (let r = 0; r < qs.length; r += 10) rows.push(Array.from({ length: 10 }, (_, k) => (qs[r + k] ? `${qs[r + k].no}. ${LETTERS[qs[r + k].key]}` : "")));
-  body.push(table(rows, Array(10).fill(963).map((w, k) => (k === 9 ? W - 963 * 9 : w)), { size: 17, centerAll: true }));
-  const dist = [0, 0, 0, 0]; qs.forEach((q) => dist[q.key]++);
-  body.push(P(`Sebaran kunci: A = ${dist[0]}, B = ${dist[1]}, C = ${dist[2]}, D = ${dist[3]}`, { size: 16, italics: true, color: "7F7F7F", before: 40 }));
+  const rows = []; for (let r = 0; r < qs.length; r += 6) rows.push(Array.from({ length: 6 }, (_, k) => (qs[r + k] ? `${qs[r + k].no}. ${qs[r + k].keyStr}` : "")));
+  body.push(table(rows, [1606, 1606, 1606, 1606, 1607, 1607], { size: 17, centerAll: true }));
+  const dist = [0, 0, 0, 0, 0]; qs.filter((q) => q.type === "pg").forEach((q) => dist[q.key]++);
+  body.push(P(`Sebaran kunci PG: A = ${dist[0]}, B = ${dist[1]}, C = ${dist[2]}, D = ${dist[3]}, E = ${dist[4]}. MCMA ditulis sebagai himpunan huruf kunci; Benar/Salah ditulis berurutan sesuai nomor pernyataan.`, { size: 16, italics: true, color: "7F7F7F", before: 40 }));
 });
 body.push(H2("6.2 Pembahasan Lengkap"));
 SECTIONS.forEach((s, i) => {
   body.push(H3(`Subtes ${i + 1}: ${s.title}`));
   const rows = [["No", "Kunci", "Level", "Materi & kualifikasi internasional", "Pembahasan"]];
-  s.items.forEach((it) => { if (it.q !== undefined) rows.push([String(it.no), LETTERS[it.key], `L${it.l}`, [P(it.t, { size: 16, bold: true, after: 20, line: 240 }), P(`TIMSS: ${TIMSS_SHORT[it.l]} • PISA ≈ ${PISA_LV[it.l]}`, { size: 15, color: BLUE, after: 20, line: 240 }), P(intlTag(s, it), { size: 15, italics: true, color: "595959", after: 0, line: 240 })], it.e]); });
-  body.push(table(rows, [500, 800, 750, 3400, 4188], { header: true, size: 17, zebra: true }));
+  s.items.forEach((it) => { if (it.q !== undefined) rows.push([String(it.no), it.keyStr, `L${it.l}`, [P(it.t, { size: 16, bold: true, after: 20, line: 240 }), P(`${FORMAT[it.type]} • ${it.c ? "Kontekstual" : "Non-kontekstual"}`, { size: 15, after: 20, line: 240 }), P(`TIMSS: ${TIMSS_SHORT[it.l]} • PISA ≈ ${PISA_LV[it.l]}`, { size: 15, color: BLUE, after: 20, line: 240 }), P(intlTag(s, it), { size: 15, italics: true, color: "595959", after: 0, line: 240 })], it.e]); });
+  body.push(table(rows, [500, 1000, 650, 3300, 4188], { header: true, size: 17, zebra: true }));
   if (s.essays) {
     body.push(P(`Pedoman Kode Uraian Subtes ${i + 1} (model coding guide PISA)`, { bold: true, color: NAVY, size: 20, before: 160, after: 80, keepNext: true }));
     s.essays.forEach((e, k) => {
@@ -703,9 +752,15 @@ SECTIONS.forEach((s, i) => {
 // BAGIAN VII — Penskoran
 body.push(H1("Bagian VII — Pedoman Penskoran, Interpretasi & Analisis Hasil"));
 body.push(H2("7.1 Nilai per Subtes"));
-body.push(P("Nilai subtes = (jumlah jawaban benar ÷ jumlah soal subtes) × 100. Tidak ada pengurangan untuk jawaban salah.", { align: AlignmentType.JUSTIFIED }));
+body.push(P("Nilai subtes = (jumlah skor ÷ jumlah soal subtes) × 100. Penskoran utama bersifat dikotomis (0/1) dan tanpa pengurangan:", { align: AlignmentType.JUSTIFIED }));
+[
+  "PG: skor 1 bila memilih kunci.",
+  "PG Kompleks (MCMA): skor 1 hanya bila semua kunci dipilih dan tidak ada opsi salah yang dipilih.",
+  "Benar/Salah: skor 1 hanya bila seluruh pernyataan dijawab tepat.",
+  "Skor parsial (opsional, untuk diagnosis, bukan untuk nilai): MCMA = (kunci terpilih − opsi salah terpilih) ÷ jumlah kunci, minimal 0; Benar/Salah = proporsi pernyataan yang dijawab tepat.",
+].forEach((t) => body.push(bullet(t, 0, { size: 20 })));
 body.push(table([["Subtes", "Jumlah soal", "Benar", "Nilai (0–100)"], ...SECTIONS.map((s, i) => [`${i + 1}. ${s.title}`, String(s.count), "", ""])], [5038, 1500, 1500, 1600], { header: true, size: 19, center: true }));
-body.push(P(`Khusus Subtes ${NI}: skor = jumlah benar pilihan ganda (maks. ${INTL.count}) + jumlah kode uraian (maks. ${INTL.essays.length * 2}); nilai = skor ÷ ${INTL.count + INTL.essays.length * 2} × 100. Nilai Subtes ${NI} dilaporkan sebagai Indeks Literasi Internasional dan tidak dimasukkan ke skor komposit sekolah.`, { size: 19, before: 80, align: AlignmentType.JUSTIFIED }));
+body.push(P(`Khusus Subtes ${NI}: skor = jumlah skor butir objektif (maks. ${INTL.count}) + jumlah kode uraian (maks. ${INTL.essays.length * 2}); nilai = skor ÷ ${INTL.count + INTL.essays.length * 2} × 100. Nilai Subtes ${NI} dilaporkan sebagai Indeks Literasi Internasional dan tidak dimasukkan ke skor komposit sekolah.`, { size: 19, before: 80, align: AlignmentType.JUSTIFIED }));
 body.push(H2("7.2 Skor Komposit per Sekolah Tujuan (Bobot Simulasi)"));
 body.push(P("Skor komposit = Σ (bobot% × nilai subtes) ÷ 100. Bobot berikut disusun penyusun berdasarkan analisis Bagian I untuk keperluan simulasi; bukan bobot resmi sekolah.", { size: 20, align: AlignmentType.JUSTIFIED }));
 body.push(table([["Sekolah", ...WEIGHTS.cols], ...WEIGHTS.rows.map(([n, w]) => [n, ...w.map((x) => (x === 0 ? "–" : `${x}%`))])], [2438, 900, 900, 900, 900, 900, 900, 900, 900], { header: true, center: true, size: 18, boldFirstCol: true }));
@@ -723,17 +778,17 @@ body.push(table([
 body.push(P("Catatan: ambang di atas adalah ambang kesiapan internal tryout, bukan passing grade resmi sekolah. Komponen non-kognitif (survei karakter, tes baca Al-Qur'an, wawancara) dilaporkan terpisah sebagai profil, tidak dijumlahkan ke skor komposit.", { size: 18, italics: true, before: 80 }));
 
 body.push(H2("7.4 Estimasi Kecakapan Setara Level PISA (Indikatif)"));
-body.push(P("Gunakan persentase jawaban benar pada butir L2 dan L3 di Subtes 2, 3, 4, dan " + NI + " untuk memperkirakan posisi kecakapan peserta. Estimasi ini bersifat indikatif untuk umpan balik belajar dan bukan skor PISA resmi.", { size: 20, align: AlignmentType.JUSTIFIED }));
+body.push(P("Karena mayoritas butir berada pada level analisis (L3), gunakan persentase jawaban benar pada butir L3 di Subtes 2, 3, 4, dan " + NI + " (didukung butir L1–L2 sebagai jangkar) untuk memperkirakan posisi kecakapan peserta. Estimasi ini bersifat indikatif untuk umpan balik belajar dan bukan skor PISA resmi.", { size: 20, align: AlignmentType.JUSTIFIED }));
 body.push(table([
   ["Pola capaian peserta", "Estimasi setara", "Makna bagi persiapan seleksi unggulan"],
-  ["Benar < 50% pada butir L2", "Di bawah Level 2", "Perkuat konsep dasar dan membaca stimulus; belum siap bersaing."],
-  ["Benar ≥ 50% pada L2, < 40% pada L3", "Level 2–3", "Kecakapan dasar tercapai; latih soal multitahap dan penalaran."],
-  ["Benar ≥ 70% pada L2, 40–69% pada L3", "Level 3–4", "Sasaran minimum tercapai; tingkatkan konsistensi pada soal L3 dan uraian."],
-  ["Benar ≥ 80% pada L2, ≥ 70% pada L3, uraian rata-rata ≥ kode 1,5", "Level 4–5 ke atas", "Kompetitif untuk MAN IC, SMANU, dan Labschool; pertahankan lewat soal tipe olimpiade/PISA Level 5–6."],
+  ["Benar < 30% pada butir L3 atau < 50% pada butir L1–L2", "Level 2 ke bawah", "Perkuat konsep dasar dan membaca stimulus; belum siap bersaing."],
+  ["Benar 30–49% pada butir L3", "Level 2–3", "Kecakapan dasar tercapai; latih soal multitahap, MCMA, dan Benar/Salah."],
+  ["Benar 50–69% pada butir L3", "Level 3–4", "Sasaran minimum tercapai; tingkatkan ketelitian pada soal kompleks dan uraian."],
+  ["Benar ≥ 70% pada butir L3 dan uraian rata-rata ≥ kode 1,5", "Level 4–5 ke atas", "Kompetitif untuk MAN IC, SMANU, dan Labschool; pertahankan lewat soal tipe olimpiade/PISA Level 5–6."],
 ], [3400, 1900, 4338], { header: true, size: 18 }));
 body.push(spacer(80));
 const levelCount = (sec, l) => sec.items.filter((it) => it.q !== undefined && it.l === l).length;
-body.push(table([["Subtes", "Jumlah butir L2", "Jumlah butir L3", "Benar L2", "Benar L3", "Estimasi level"], ...SECTIONS.filter((x) => ["BIN", "MAT", "IPA", "INT"].includes(x.id)).map((x) => [x.title, String(levelCount(x, 2)), String(levelCount(x, 3)), "", "", ""])], [3138, 1300, 1300, 1300, 1300, 1300], { header: true, size: 17, center: true }));
+body.push(table([["Subtes", "Butir L1–L2", "Butir L3", "Benar L1–L2", "Benar L3", "Estimasi level"], ...SECTIONS.filter((x) => ["BIN", "MAT", "IPA", "INT"].includes(x.id)).map((x) => [x.title, String(levelCount(x, 1) + levelCount(x, 2)), String(levelCount(x, 3)), "", "", ""])], [3138, 1300, 1300, 1300, 1300, 1300], { header: true, size: 17, center: true }));
 
 body.push(H2("7.5 Penskoran Survei Karakter"));
 [
