@@ -8,8 +8,56 @@ const {
   TabStopType, VerticalAlign, PageBreak, TableLayoutType,
 } = require("docx");
 
-const SECTIONS = ["tpa", "bindo", "mat", "ipa", "bing", "ips", "pai", "arab"].map((f) => require(`./data/${f}.js`));
+const SECTIONS = ["tpa", "bindo", "mat", "ipa", "bing", "ips", "pai", "arab", "intl"].map((f) => require(`./data/${f}.js`));
 const NK = require("./data/nonkog.js");
+const INTL = SECTIONS.find((s) => s.id === "INT");
+
+// ---------- kualifikasi internasional per butir ----------
+const TIMSS = { 1: "Mengetahui (Knowing)", 2: "Menerapkan (Applying)", 3: "Menalar (Reasoning)" };
+const TIMSS_SHORT = { 1: "Mengetahui", 2: "Menerapkan", 3: "Menalar" };
+const PISA_LV = { 1: "Level 1–2", 2: "Level 2–3", 3: "Level 4–5" };
+function intlTag(sec, it) {
+  if (it.x) return it.x.fw + " • " + it.x.proc;
+  const t = it.t;
+  switch (sec.id) {
+    case "TPA":
+      if (/^Verbal/.test(t)) return "PISA Membaca – memahami makna kata (penalaran verbal)";
+      if (/^(Numerik|Kuantitatif)/.test(t)) return "PISA Matematika – Quantity • penalaran kuantitatif";
+      if (/^(Logika|Analitik)/.test(t)) return "PISA Matematika – penalaran matematis (logika & analitik)";
+      return "PISA Matematika – Space & Shape • penalaran spasial";
+    case "BIN":
+      if (/^Kebahasaan/.test(t)) return "Kaidah kebahasaan (kurikulum nasional; tidak diukur PISA)";
+      if (/numerasi/.test(t)) return "PISA Membaca – Menemukan informasi (locate)";
+      if (/inferensi|evaluasi|fakta|tujuan/.test(t)) return "PISA Membaca – Mengevaluasi & merefleksi";
+      return "PISA Membaca – Memahami (understand)";
+    case "MAT": {
+      const proc = it.l === 3 || /kontekstual/.test(t) ? "Merumuskan/menalar (formulate)" : "Menerapkan prosedur (employ)";
+      if (/Statistika|Peluang/.test(t)) return `PISA: Uncertainty & Data • TIMSS: Data & Peluang • ${proc}`;
+      if (/Pythagoras|Lingkaran|singgung|Kesebangunan|Bangun ruang|Transformasi/.test(t)) return `PISA: Space & Shape • TIMSS: Geometri • ${proc}`;
+      if (/Bilangan|akar|Merasionalkan/i.test(t)) return `PISA: Quantity • TIMSS: Bilangan • ${proc}`;
+      return `PISA: Change & Relationships • TIMSS: Aljabar • ${proc}`;
+    }
+    case "IPA": {
+      const comp = /analisis data|percobaan|pH/.test(t) ? "Menafsirkan data & bukti / merancang penyelidikan" : "Menjelaskan fenomena secara ilmiah";
+      const dom = /^Fisika/.test(t) ? "Sistem fisik • TIMSS: Fisika" : /^Kimia/.test(t) ? "Sistem fisik (materi) • TIMSS: Kimia" : "Sistem kehidupan • TIMSS: Biologi";
+      return `PISA 2025 Sains: ${dom} • ${comp}`;
+    }
+    case "ING":
+      if (/^Reading/.test(t)) return "PISA 2025 English as a Foreign Language – Reading • CEFR A2–B1";
+      if (/^Expression/.test(t)) return "CEFR A2 – interaksi fungsional";
+      return "CEFR A2–B1 – penguasaan tata bahasa & kosakata";
+    case "IPS":
+      if (/skala|kepadatan|neraca/.test(t)) return "PISA Matematika – Quantity (konteks sosial)";
+      return "Literasi sosial–kewargaan (sejalan IEA ICCS; bukan domain PISA)";
+    case "PAI":
+      if (/tabayyun/.test(t)) return "PISA Membaca – menilai kredibilitas informasi";
+      if (/Moderasi|Piagam|Hujurat|toleransi/i.test(t)) return "OECD PISA Global Competence – menghargai keberagaman";
+      return "Kurikulum PAI/madrasah (tanpa padanan asesmen internasional)";
+    case "ARB":
+      return "Pembanding CEFR A1–A2 (kecakapan bahasa asing)";
+  }
+  return "";
+}
 
 // ---------- konstanta tata letak ----------
 const FONT = "Arial";
@@ -169,7 +217,16 @@ function renderQuestion(it) {
 function renderStim(st, sec) {
   const last = (() => { let seen = false, cnt = 0; for (const it of sec.items) { if (it === st) { seen = true; continue; } if (!seen) continue; if (it.stim || it.part) break; if (it.q !== undefined) cnt++; } return st.from + cnt - 1; })();
   const ch = [P(st.stim.title.replace(/nomor \d+–\d+/, `nomor ${st.from}–${last}`), { bold: true, size: 20, color: NAVY, after: 80 })];
-  st.stim.paras.forEach((t) => ch.push(st.stim.rtl ? P(t, { rtl: true, align: AlignmentType.RIGHT, after: 60, size: 24 }) : P(t, { size: 21, align: AlignmentType.JUSTIFIED, after: 70 })));
+  st.stim.paras.forEach((t) => {
+    if (t && t.table) {
+      const cols = t.table[0].length; const cw = Math.floor((W - 400) / cols);
+      ch.push(new Table({ width: { size: cw * cols, type: WidthType.DXA }, columnWidths: Array(cols).fill(cw), layout: TableLayoutType.FIXED,
+        rows: t.table.map((r, ri) => new TableRow({ children: r.map((c) => cell(c, cw, { size: 18, bold: ri === 0 && !t.nohead, align: AlignmentType.CENTER, fill: c === "RAK" ? "F4B183" : (ri === 0 && !t.nohead ? "DCE6F2" : "FFFFFF") })) })) }));
+      ch.push(spacer(60));
+      return;
+    }
+    ch.push(st.stim.rtl ? P(t, { rtl: true, align: AlignmentType.RIGHT, after: 60, size: 24 }) : P(t, { size: 21, align: AlignmentType.JUSTIFIED, after: 70 }));
+  });
   return [box(ch, "F7F9FC"), spacer(100)];
 }
 function sectionHeader(sec, idx, label = "SUBTES") {
@@ -260,6 +317,7 @@ const FINDINGS = [
   "Komponen non-kognitif makin menentukan: psikotes, survei karakter, kesiapan hidup berasrama, dan wawancara siswa–orang tua. Paket ini menyertakan simulasi survei karakter, rubrik tes baca Al-Qur'an, dan simulasi wawancara.",
   "Setiap sekolah memiliki kekhasan: MAN IC dan Al Azhar menuntut kompetensi keislaman (PAI, tilawah, bahasa Arab untuk MAN IC); SMANU MH Thamrin menuntut Matematika–IPA–Bahasa Inggris yang kuat dengan prasyarat rapor ≥85; Labschool menuntut penalaran umum dan karakter.",
   "Rasio keketatan sangat tinggi (puluhan ribu peserta untuk madrasah unggulan; ±88 kursi SMANU; ±3.600 peserta Labschool). Tryout perlu diikuti analisis butir dan program remedial terarah, bukan sekadar skor total.",
+  "Arah soal seleksi sejalan dengan standar internasional (PISA, TIMSS) dan asesmen nasional (AKM, TKA SMP). Rata-rata skor PISA 2025 Indonesia masih berada di sekitar Level 1a, sedangkan sekolah unggulan menjaring siswa jauh di atas rata-rata. Karena itu paket ini ditambah Subtes 9 bermodel unit PISA/TIMSS dan setiap butir diberi kualifikasi internasional (domain kognitif TIMSS dan estimasi level PISA).",
 ];
 
 const BLUEPRINT_PROFILES = [
@@ -267,6 +325,7 @@ const BLUEPRINT_PROFILES = [
   ["SMA Labschool", "TPA (verbal & kuantitatif), Literasi B. Indonesia (pemahaman bacaan), Matematika, IPA, B. Inggris, Survei Karakter"],
   ["SMANU MH Thamrin", "Matematika, IPA, B. Inggris (inti); TPA (pendukung psikotes); Survei Karakter; Simulasi Wawancara"],
   ["SMA Al Azhar", "TPA, Matematika, IPA, B. Inggris, Literasi B. Indonesia, PAI, Tes Baca Al-Qur'an & praktik ibadah, Simulasi Wawancara"],
+  ["Semua sekolah", "Subtes 9 Literasi Standar Internasional (wajib untuk target MAN IC & Labschool; sangat dianjurkan untuk SMANU & Al Azhar)"],
 ];
 
 const WEIGHTS = {
@@ -302,9 +361,22 @@ const SOURCES = [
   ["SMA Islam Al Azhar 1 – Pengumuman", "https://smaia1.al-azhar.sch.id/pengumuman/"],
   ["Al Azhar Kembangan – Tes PMB SMA Islam Al Azhar 20", "https://www.alazhar-kembangan.sch.id/berita/sma/tes-penerimaan-murid-baru-sma-islam-al-azhar-20-kembangan-tahun-pelajaran-2024-2025/a97da629b098b75c294dffdc3e463904"],
   ["Jurnal Ridwan Institute – Seleksi Siswa SMA Islam Al-Azhar Kelapa Gading", "https://arl.ridwaninstitute.co.id/index.php/arl/article/download/162/109/834"],
+  ["OECD – PISA 2025 Results (Volume I): What is PISA", "https://www.oecd.org/en/publications/pisa-2025-results-volume-i_73451bc5-en/full-report/what-is-pisa_d18121f2.html"],
+  ["OECD – Siaran pers PISA 2025 (8 September 2026)", "https://oecd.org/en/about/news/press-releases/2026/09/pisa-2025-students-reading-and-mathematics-performance-declined-sharply-across-the-oecd.html"],
+  ["Education International – What you need to know about PISA 2025", "https://www.ei-ie.org/en/item/32893:what-you-need-to-know-about-pisa-2025"],
+  ["Scottish Government – PISA 2025 National Report (kerangka sains 2025)", "https://www.gov.scot/publications/pisa-2025-national-report-scotland/pages/5/"],
+  ["OECD – PISA 2025 Science Framework (draf)", "https://www.fisme.science.uu.nl/publicaties/literatuur/PISA_2025_Science_Framework.pdf"],
+  ["Info Pendidikan BIC – Hasil PISA 2025 Indonesia", "https://infopendidikan.bic.id/hasil-pisa-2025-indonesia/"],
+  ["Bisnis.com – Skor PISA 2025 Indonesia Masih di Bawah Rata-rata OECD", "https://kabar24.bisnis.com/read/20260911/79/2003323/skor-pisa-2025-indonesia-masih-di-bawah-rata-rata-oecd"],
+  ["OECD – PISA 2022 Results Country Note: Indonesia", "https://www.oecd.org/en/publications/pisa-2022-results-volume-i-and-ii-country-notes_ed6fbcc5-en/indonesia_c2e1ae0e-en.html"],
+  ["TIMSS 2023 – Content and Cognitive Domains (Grade 8)", "https://timss2023.org/?p=11845"],
+  ["TIMSS 2023 Frameworks – Mathematics", "https://elvis.bc.edu/timss2023/frameworks/pdf/T23_Frameworks_Ch1_Mathematics.pdf"],
+  ["Kompas TV – Hasil TKA dapat digunakan untuk jalur prestasi SPMB 2026/2027", "https://www.kompas.tv/info-publik/647057/kemendikdasmen-hasil-tka-bisa-digunakan-untuk-jalur-prestasi-spmb-2026-2027"],
+  ["JPNN – Jadwal TKA 2026 jenjang SD dan SMP, jumlah soal & durasi", "https://www.jpnn.com/news/jadwal-tka-2026-jenjang-sd-dan-smp-jumlah-soal-durasinya"],
 ];
 
 // ---------- perakitan dokumen ----------
+const NI = SECTIONS.length; // nomor dasar instrumen non-kognitif
 const body = [];
 
 // Sampul
@@ -316,7 +388,8 @@ body.push(P("Disusun berdasarkan analisis sistem dan materi seleksi:", { size: 2
 body.push(P("MAN Insan Cendekia  •  SMA Labschool UNJ  •  SMAN Unggulan M.H. Thamrin  •  SMA Islam Al Azhar", { bold: true, size: 22, align: AlignmentType.CENTER, after: 480 }));
 body.push(table([
   ["Sasaran", "Siswa kelas IX SMP/MTs (calon peserta seleksi TP 2027/2028)"],
-  ["Isi paket", `${SECTIONS.length} subtes kognitif (${TOTAL_ITEMS} butir pilihan ganda) + 3 instrumen non-kognitif`],
+  ["Isi paket", `${SECTIONS.length} subtes kognitif (${TOTAL_ITEMS} butir pilihan ganda + ${INTL.essays.length} uraian model PISA) + 3 instrumen non-kognitif`],
+  ["Standar acuan", "Profil seleksi 4 sekolah + kualifikasi internasional PISA 2025 & TIMSS 2023 (domain kognitif, estimasi level PISA)"],
   ["Total waktu tes tertulis", `${TOTAL_TIME} menit (disarankan dalam 2 hari) + tes baca Al-Qur'an & wawancara individual`],
   ["Kelengkapan", "Analisis seleksi, kisi-kisi, naskah soal, lembar jawaban, kunci & pembahasan, pedoman skor"],
 ], [2600, W - 2600], { firstColFill: true, boldFirstCol: true, size: 20 }));
@@ -329,9 +402,9 @@ body.push(table([
 // Isi dokumen (statis)
 body.push(H1("Isi Dokumen"));
 [
-  "Bagian I — Analisis Data Tes Masuk Empat Sekolah Unggulan",
+  "Bagian I — Analisis Data Tes Masuk Empat Sekolah Unggulan & Kualifikasi Standar Internasional (PISA 2025, TIMSS)",
   "Bagian II — Spesifikasi & Kisi-kisi Tryout 1",
-  "Bagian III — Naskah Soal (Subtes 1–8)",
+  `Bagian III — Naskah Soal (Subtes 1–${SECTIONS.length}, termasuk Subtes ${SECTIONS.length} model PISA/TIMSS)`,
   "Bagian IV — Instrumen Non-Kognitif (Survei Karakter, Tes Baca Al-Qur'an, Simulasi Wawancara)",
   "Bagian V — Lembar Jawaban",
   "Bagian VI — Kunci Jawaban & Pembahasan",
@@ -348,13 +421,14 @@ body.push(box([
 ]));
 
 // BAGIAN I — Analisis
-body.push(H1("Bagian I — Analisis Data Tes Masuk Empat Sekolah Unggulan"));
+body.push(H1("Bagian I — Analisis Data Tes Masuk & Kualifikasi Standar Internasional"));
 body.push(H2("1.1 Ringkasan Eksekutif"));
-body.push(P("Analisis ini menghimpun informasi publik (laman resmi sekolah, pemberitaan nasional, dan publikasi ilmiah) tentang sistem seleksi dan materi tes keempat sekolah pada siklus 2023–2026, lalu menerjemahkannya menjadi spesifikasi tryout. Empat kesimpulan utama:", { align: AlignmentType.JUSTIFIED }));
+body.push(P("Analisis ini menghimpun informasi publik (laman resmi sekolah, pemberitaan nasional, dan publikasi ilmiah) tentang sistem seleksi dan materi tes keempat sekolah pada siklus 2023–2026, lalu memadukannya dengan kerangka asesmen internasional (PISA 2025 dan TIMSS 2023) untuk menyusun spesifikasi tryout. Lima kesimpulan utama:", { align: AlignmentType.JUSTIFIED }));
 [
   "Semua sekolah memakai seleksi bertahap: jalur prestasi dan jalur tes, dengan kombinasi tes kognitif (potensi/akademik) dan non-kognitif (psikotes, survei karakter, wawancara, atau tes keagamaan).",
   "Matematika/penalaran kuantitatif dan Bahasa Inggris adalah materi yang diuji di keempat sekolah; potensi akademik (verbal, numerik, penalaran) dan literasi membaca diuji eksplisit di MAN IC dan Labschool.",
   "Kekhasan: MAN IC dan Al Azhar menambahkan dimensi keislaman; SMANU MH Thamrin menekankan Matematika–IPA–Bahasa Inggris dengan prasyarat rapor ≥85 serta kesiapan berasrama.",
+  "Soal seleksi sekolah unggulan makin serupa dengan asesmen internasional: berbasis stimulus, menuntut penalaran, dan dikerjakan di komputer. Hasil PISA 2025 menempatkan rata-rata siswa Indonesia di sekitar Level 1a, sehingga calon siswa unggulan perlu dilatih hingga Level 3–4 ke atas.",
   `Tryout 1 dirancang sebagai paket komposit: ${SECTIONS.length} subtes kognitif, ${TOTAL_ITEMS} butir (${HOTS_PCT}% level penalaran/HOTS), ditambah simulasi survei karakter, tes baca Al-Qur'an, dan wawancara.`,
 ].forEach((t) => body.push(bullet(t)));
 
@@ -384,22 +458,76 @@ body.push(table([
 ], [2000, 4238, 3400], { header: true, size: 19 }));
 body.push(spacer(160));
 
-body.push(H2("1.6 Catatan Validitas Data"));
+body.push(H2("1.6 Kualifikasi Standar Internasional: PISA 2025, TIMSS 2023 & Asesmen Nasional"));
+body.push(P("Sekolah unggulan menyeleksi siswa terbaik dari populasi nasional. Karena itu, tingkat kesulitan dan karakter soal tryout perlu dikalibrasi tidak hanya terhadap kurikulum SMP/MTs, tetapi juga terhadap standar internasional yang mengukur kemampuan menggunakan pengetahuan dalam konteks nyata. Dua rujukan utama adalah PISA (OECD; siswa usia 15 tahun—tepat usia calon siswa SMA) dan TIMSS (IEA; siswa kelas 8).", { align: AlignmentType.JUSTIFIED }));
+body.push(H3("a. PISA 2025 — fakta kunci"));
+body.push(table([
+  ["Aspek", "Keterangan"],
+  ["Rilis hasil", "Volume I diluncurkan OECD pada 8 September 2026. Laporan English as a Foreign Language dijadwalkan April 2027 dan laporan Learning in the Digital World Mei 2027."],
+  ["Domain", "Sains sebagai domain utama; Membaca dan Matematika sebagai domain minor; Learning in the Digital World (domain inovatif baru, dinilai pertama kali); English as a Foreign Language (opsional, 22 negara/ekonomi)."],
+  ["Kompetensi sains 2025", "(1) Menjelaskan fenomena secara ilmiah; (2) Merancang dan mengevaluasi penyelidikan ilmiah serta menafsirkan data dan bukti secara kritis; (3) Meneliti, mengevaluasi, dan menggunakan informasi ilmiah untuk pengambilan keputusan dan tindakan. Dibingkai dalam gagasan agency in the Anthropocene (kepedulian dan kemampuan bertindak atas isu lingkungan)."],
+  ["Proses matematika", "Merumuskan situasi secara matematis (formulate), menerapkan konsep dan prosedur (employ), menafsirkan dan mengevaluasi hasil (interpret), dengan penalaran matematis sebagai inti. Kategori isi: Quantity, Change & Relationships, Space & Shape, Uncertainty & Data."],
+  ["Proses membaca", "Menemukan informasi; memahami (makna literal dan inferensi); mengevaluasi dan merefleksi (termasuk menilai kredibilitas dan teks multisumber)."],
+  ["Learning in the Digital World", "Kemampuan membangun pengetahuan dan memecahkan masalah secara iteratif dan mandiri dengan alat serta praktik komputasional (berpikir komputasional, menguji dan memperbaiki solusi)."],
+  ["Format butir", "Berbasis komputer; satu stimulus (unit) diikuti beberapa soal; pilihan ganda sederhana/kompleks dan respons terbuka yang dinilai dengan kode skor penuh, sebagian, atau nol."],
+], [2400, W - 2400], { header: true, size: 18, boldFirstCol: true }));
+body.push(spacer(120));
+body.push(H3("b. Capaian Indonesia dan level kecakapan"));
+body.push(table([
+  ["Domain", "Skor PISA 2025", "Perubahan dari 2022", "Estimasi level rata-rata", "% siswa ≥ Level 2 (PISA 2022)"],
+  ["Membaca", "365", "naik 7 poin*", "Level 1a", "25% (OECD 74%)"],
+  ["Sains", "389", "naik 6 poin*", "Level 1a", "34% (OECD 76%)"],
+  ["Matematika", "364", "turun 2 poin*", "Level 1a", "18% (OECD 69%)"],
+], [1800, 1600, 1900, 1900, 2438], { header: true, center: true, size: 18, boldFirstCol: true }));
+body.push(P("* Menurut OECD, perubahan 2022–2025 tersebut tidak signifikan secara statistik. Skor Indonesia masih di bawah rata-rata OECD pada ketiga domain.", { size: 17, italics: true, before: 40 }));
+body.push(spacer(80));
+body.push(table([
+  ["Level PISA Matematika", "Batas bawah skor (≈)", "Gambaran kemampuan", "Posisi dalam tryout ini"],
+  ["Level 1a", "358", "Menjawab soal dengan konteks akrab, informasi lengkap, dan prosedur rutin yang diminta secara langsung.", "Di bawah sasaran"],
+  ["Level 2 (baseline)", "420", "Mengenali situasi yang memerlukan representasi matematis sederhana tanpa petunjuk langsung; menafsirkan hasil secara harfiah.", "Kecakapan minimum"],
+  ["Level 3", "482", "Menjalankan prosedur bertahap, memilih strategi sederhana, dan menafsirkan berbagai representasi.", "Sasaran minimum calon siswa unggulan"],
+  ["Level 4", "545", "Bekerja dengan model eksplisit pada situasi kompleks, memadukan representasi, dan memberi penjelasan berargumen.", "Sasaran kompetitif (MAN IC, SMANU, Labschool)"],
+  ["Level 5–6", "607 / 669", "Mengembangkan dan mengevaluasi model untuk situasi baru, bernalar dan menggeneralisasi, serta mengomunikasikan argumen secara presisi.", "Unggul/setara peserta olimpiade"],
+], [1700, 1300, 4238, 2400], { header: true, size: 18, boldFirstCol: true }));
+body.push(P("Sasaran level di kolom terakhir adalah rekomendasi penyusun untuk calon siswa sekolah unggulan, bukan ketentuan resmi.", { size: 17, italics: true, before: 40 }));
+body.push(H3("c. TIMSS 2023 dan asesmen nasional yang serumpun"));
+[
+  "TIMSS (kelas 8) mengelompokkan tuntutan berpikir ke dalam tiga domain kognitif: Mengetahui (Knowing), Menerapkan (Applying), dan Menalar (Reasoning). Target proporsi TIMSS 2023 kelas 8: Matematika 35% : 40% : 25%; Sains 35% : 35% : 30%.",
+  "Pada tryout ini, level L1/L2/L3 dipetakan langsung ke domain TIMSS Mengetahui/Menerapkan/Menalar, dan diestimasi setara PISA Level 1–2, Level 2–3, dan Level 4–5.",
+  "Di dalam negeri, Asesmen Nasional (AKM) mengukur literasi dan numerasi dengan kerangka yang serupa. Tes Kemampuan Akademik (TKA) SMP 2026 menguji Bahasa Indonesia dan Matematika berbasis komputer (±130 menit), dan hasilnya dapat digunakan pada jalur prestasi akademik SPMB.",
+].forEach((t) => body.push(bullet(t, 0, { size: 20 })));
+body.push(H3("d. Pemetaan subtes ke kerangka internasional"));
+body.push(table([
+  ["Subtes", "Kerangka internasional acuan", "Cara kualifikasi butir"],
+  ["1. TPA", "PISA Membaca (penalaran verbal) & PISA Matematika (penalaran kuantitatif, logis, spasial)", "Domain TIMSS + estimasi level PISA"],
+  ["2. Literasi B. Indonesia", "PISA Reading Literacy: menemukan, memahami, mengevaluasi & merefleksi", "Proses membaca PISA per butir"],
+  ["3. Matematika", "PISA Mathematical Literacy & TIMSS Mathematics Grade 8", "Kategori isi PISA/TIMSS + proses formulate/employ"],
+  ["4. IPA", "PISA 2025 Scientific Literacy & TIMSS Science Grade 8", "Kompetensi sains PISA 2025 + domain isi TIMSS"],
+  ["5. Bahasa Inggris", "PISA 2025 English as a Foreign Language; CEFR A2–B1", "Reading (PISA FLA) atau level CEFR"],
+  ["6. IPS", "Literasi sosial–kewargaan (sejalan IEA ICCS)", "Domain kognitif + konteks"],
+  ["7. PAI", "OECD Global Competence (sikap terhadap keberagaman) untuk butir moderasi beragama", "Domain kognitif; butir lain berbasis kurikulum madrasah"],
+  ["8. Bahasa Arab", "Pembanding CEFR A1–A2", "Domain kognitif"],
+  [`${NI}. Literasi Internasional`, "Replika unit PISA 2025 (Sains, Matematika, Membaca multisumber, Learning in the Digital World, English FLA) & TIMSS", "Kerangka, proses, konteks, dan format per butir; uraian dengan kode PISA"],
+], [2200, 4538, 2900], { header: true, size: 18, boldFirstCol: true }));
+body.push(spacer(120));
+
+body.push(H2("1.7 Catatan Validitas Data"));
 [
   "Data berasal dari sumber publik 2020–2026; sebagian besar berupa pemberitaan dan laman sekolah, bukan dokumen petunjuk teknis resmi yang lengkap. Angka kuota dan urutan tahapan SMANU MH Thamrin berbeda antarsumber.",
   "Materi SMA Al Azhar bervariasi antarunit; profil di atas merupakan sintesis dari beberapa unit.",
   "Butir soal dalam paket ini adalah butir orisinal yang disusun mengikuti karakteristik materi dan level kognitif, bukan salinan soal asli seleksi.",
   "Bobot penilaian dan ambang kesiapan pada Bagian VII adalah bobot simulasi penyusun, bukan ketentuan resmi sekolah.",
+  "Kualifikasi PISA/TIMSS pada setiap butir adalah estimasi penyusun berdasarkan karakter butir. Skor tryout tidak dapat dikonversi secara langsung menjadi skor PISA resmi, karena PISA memakai skala hasil kalibrasi internasional.",
 ].forEach((t) => body.push(bullet(t, 0, { size: 20 })));
 
 // BAGIAN II — Spesifikasi
 body.push(H1("Bagian II — Spesifikasi & Kisi-kisi Tryout 1"));
 body.push(H2("2.1 Struktur Paket"));
 const specRows = [["Subtes", "Nama subtes", "Butir", "Waktu", "Relevansi sekolah"]];
-SECTIONS.forEach((s, i) => specRows.push([String(i + 1), s.title, String(s.count), `${s.time}′`, s.relevance]));
-specRows.push(["9", NK.survey.title, String(NK.survey.items.length), `${NK.survey.time}′`, NK.survey.relevance]);
-specRows.push(["10", "Tes Baca Al-Qur'an & Praktik Ibadah", "5 tugas", "±10′/peserta", NK.quran.relevance]);
-specRows.push(["11", "Simulasi Wawancara", `${NK.interview.student.length} + ${NK.interview.parent.length} pertanyaan`, "±15′/peserta", NK.interview.relevance]);
+SECTIONS.forEach((s, i) => specRows.push([String(i + 1), s.title, s.essays ? `${s.count} PG + ${s.essays.length} uraian` : String(s.count), `${s.time}′`, s.relevance]));
+specRows.push([String(NI + 1), NK.survey.title, String(NK.survey.items.length), `${NK.survey.time}′`, NK.survey.relevance]);
+specRows.push([String(NI + 2), "Tes Baca Al-Qur'an & Praktik Ibadah", "5 tugas", "±10′/peserta", NK.quran.relevance]);
+specRows.push([String(NI + 3), "Simulasi Wawancara", `${NK.interview.student.length} + ${NK.interview.parent.length} pertanyaan`, "±15′/peserta", NK.interview.relevance]);
 specRows.push(["", "TOTAL tes tertulis kognitif", String(TOTAL_ITEMS), `${TOTAL_TIME - NK.survey.time}′`, "+ survei karakter 15′"]);
 body.push(table(specRows, [800, 2900, 1000, 1000, 3938], { header: true, size: 18 }));
 body.push(spacer(160));
@@ -412,6 +540,17 @@ lv.forEach(([s, c]) => lvRows.push([s.title, String(c[1]), String(c[2]), String(
 lvRows.push(["TOTAL", String(tot[1]), String(tot[2]), String(tot[3]), `${Math.round((tot[3] / TOTAL_ITEMS) * 100)}%`]);
 body.push(table(lvRows, [3838, 1450, 1450, 1450, 1450], { header: true, center: true, size: 18 }));
 body.push(P(`Proporsi keseluruhan: L1 ${Math.round((tot[1] / TOTAL_ITEMS) * 100)}% • L2 ${Math.round((tot[2] / TOTAL_ITEMS) * 100)}% • L3 ${Math.round((tot[3] / TOTAL_ITEMS) * 100)}%. Komposisi ini meniru karakter seleksi unggulan yang menempatkan penalaran dan literasi sebagai pembeda utama.`, { size: 19, before: 80 }));
+body.push(H3("Perbandingan dengan target domain kognitif TIMSS 2023 (kelas 8)"));
+const pct = (c, n) => `${Math.round((c / n) * 100)}%`;
+const cmpRow = (label, id, target) => { const [sec, c] = lv.find(([s]) => s.id === id); return [label, `${pct(c[1], sec.count)} : ${pct(c[2], sec.count)} : ${pct(c[3], sec.count)}`, target]; };
+body.push(table([
+  ["Bidang", "Tryout ini (Mengetahui : Menerapkan : Menalar)", "Target TIMSS 2023 kelas 8"],
+  cmpRow("Matematika (Subtes 3)", "MAT", "35% : 40% : 25%"),
+  cmpRow("IPA (Subtes 4)", "IPA", "35% : 35% : 30%"),
+  cmpRow(`Literasi Internasional (Subtes ${NI})`, "INT", "– (model PISA)"),
+  ["Seluruh paket", `${pct(tot[1], TOTAL_ITEMS)} : ${pct(tot[2], TOTAL_ITEMS)} : ${pct(tot[3], TOTAL_ITEMS)}`, "–"],
+], [2600, 4238, 2800], { header: true, center: true, size: 18, boldFirstCol: true }));
+body.push(P("Subtes Matematika sengaja diberi porsi penalaran lebih besar daripada TIMSS karena seleksi sekolah unggulan menyaring siswa di atas rata-rata; porsi Mengetahui yang kecil menjadi penanda bahwa hafalan rumus saja tidak cukup. Subtes IPA mendekati proporsi TIMSS dengan penekanan pada penerapan konsep.", { size: 19, before: 60, align: AlignmentType.JUSTIFIED }));
 
 body.push(H2("2.3 Paket Modular & Jadwal Pelaksanaan"));
 body.push(table([["Sekolah tujuan", "Subtes/instrumen yang dikerjakan"], ...BLUEPRINT_PROFILES], [2400, W - 2400], { header: true, size: 19, boldFirstCol: true }));
@@ -427,7 +566,8 @@ body.push(table([
   ["Hari 2 – Sesi 6", "Subtes 6: IPS (peminatan)", "25 menit"],
   ["Hari 2 – Sesi 7", "Subtes 7: PAI & Literasi Keislaman", "25 menit"],
   ["Hari 2 – Sesi 8", "Subtes 8: Bahasa Arab", "25 menit"],
-  ["Hari 2 – Sesi 9", "Survei Karakter", "15 menit"],
+  ["Hari 2 – Sesi 9", `Subtes ${NI}: Literasi Standar Internasional (model PISA 2025 & TIMSS)`, `${INTL.time} menit`],
+  ["Hari 2 – Sesi 10", "Survei Karakter", "15 menit"],
   ["Hari 2 – Individual", "Tes baca Al-Qur'an (±10 menit) & simulasi wawancara (±15 menit) per peserta", "terjadwal"],
 ], [2400, 5638, 1600], { header: true, size: 19 }));
 
@@ -436,6 +576,7 @@ body.push(H2("2.4 Tata Tertib & Petunjuk Umum Peserta"));
   "Isilah identitas pada lembar jawaban sebelum tes dimulai.",
   "Setiap soal memiliki empat pilihan jawaban (A, B, C, D) dan hanya satu jawaban yang paling tepat.",
   "Jawaban benar bernilai 1, jawaban salah atau kosong bernilai 0 (tanpa pengurangan). Usahakan menjawab semua soal.",
+  `Subtes ${NI} juga memuat ${INTL.essays.length} soal uraian. Tulis jawaban uraian secara lengkap dan runtut pada lembar jawaban uraian; jawaban dinilai dengan kode 2 (penuh), 1 (sebagian), atau 0.`,
   "Kerjakan sesuai alokasi waktu setiap subtes; tidak diperkenankan kembali ke subtes yang waktunya telah habis.",
   "Kalkulator, gawai, dan catatan tidak diperkenankan. Gunakan kertas coretan yang disediakan.",
   "Kerjakan dengan jujur—hasil tryout dipakai untuk memetakan kekuatan dan kelemahan, bukan untuk menghakimi.",
@@ -446,9 +587,10 @@ SECTIONS.forEach((s, i) => {
   body.push(H3(`Subtes ${i + 1}: ${s.title}`));
   const groups = new Map();
   s.items.forEach((it) => { if (it.q === undefined) return; if (!groups.has(it.t)) groups.set(it.t, []); groups.get(it.t).push(it); });
-  const rows = [["Materi / Indikator", "Nomor soal", "Jml", "Level"]];
-  for (const [t, its] of groups) rows.push([t, its.map((x) => x.no).join(", "), String(its.length), [...new Set(its.map((x) => `L${x.l}`))].join("/")]);
-  body.push(table(rows, [4800, 2638, 900, 1300], { header: true, size: 18, zebra: true }));
+  const rows = [["Materi / Indikator", "Nomor soal", "Jml", "Level", "Domain TIMSS", "Kualifikasi internasional"]];
+  for (const [t, its] of groups) rows.push([t, its.map((x) => x.no).join(", "), String(its.length), [...new Set(its.map((x) => `L${x.l}`))].join("/"), [...new Set(its.map((x) => TIMSS_SHORT[x.l]))].join("/"), [...new Set(its.map((x) => intlTag(s, x)))].join(" | ")]);
+  if (s.essays) s.essays.forEach((e, k) => rows.push([`Uraian – ${e.unit}`, `U${k + 1}`, "1", `L${e.l}`, TIMSS_SHORT[e.l], `${e.x.fw} • ${e.x.proc}`]));
+  body.push(table(rows, [2700, 1300, 550, 750, 1300, 3038], { header: true, size: 16, zebra: true }));
   body.push(spacer(120));
 });
 
@@ -456,7 +598,7 @@ SECTIONS.forEach((s, i) => {
 body.push(H1("Bagian III — Naskah Soal"));
 body.push(box([
   P("PETUNJUK UMUM", { bold: true, color: NAVY, after: 60 }),
-  P(`Paket ini terdiri atas ${SECTIONS.length} subtes dengan total ${TOTAL_ITEMS} soal. Nomor soal dimulai dari 1 pada setiap subtes. Tandai jawaban pada Lembar Jawaban (Bagian V) sesuai nomor dan subtes. Selamat mengerjakan—bismillah, semoga sukses!`, { size: 20, after: 0 }),
+  P(`Paket ini terdiri atas ${SECTIONS.length} subtes dengan total ${TOTAL_ITEMS} soal pilihan ganda dan ${INTL.essays.length} soal uraian (Subtes ${NI}). Nomor soal dimulai dari 1 pada setiap subtes. Tandai jawaban pada Lembar Jawaban (Bagian V) sesuai nomor dan subtes. Selamat mengerjakan—bismillah, semoga sukses!`, { size: 20, after: 0 }),
 ]));
 SECTIONS.forEach((s, i) => {
   if (i > 0) body.push(new Paragraph({ children: [new PageBreak()] }));
@@ -467,18 +609,25 @@ SECTIONS.forEach((s, i) => {
     else if (it.stim) body.push(...renderStim(it, s));
     else body.push(...renderQuestion(it));
   });
+  if (s.essays) {
+    body.push(P("Bagian B — Uraian (respons terbuka model PISA)", { bold: true, color: BLUE, size: 21, before: 160, after: 100, keepNext: true }));
+    s.essays.forEach((e, k) => {
+      body.push(P([new TextRun({ text: `U${k + 1}.\t`, bold: true, font: FONT, size: 22 }), new TextRun({ text: `[${e.unit}] `, italics: true, font: FONT, size: 20, color: BLUE }), ...runs(e.q)], { indent: { left: QIND + 113, hanging: QIND + 113 }, tabs: [{ type: TabStopType.LEFT, position: QIND + 113 }], after: 80, keepNext: true }));
+      body.push(P("Tulis jawabanmu pada Lembar Jawaban Uraian (Bagian V).", { italics: true, size: 18, color: "7F7F7F", indent: { left: QIND + 113 }, after: 160 }));
+    });
+  }
   body.push(P("— Akhir subtes. Periksa kembali jawaban Anda. —", { italics: true, align: AlignmentType.CENTER, size: 19, before: 160, color: "7F7F7F" }));
 });
 
 // BAGIAN IV — Non-kognitif
 body.push(H1("Bagian IV — Instrumen Non-Kognitif"));
-body.push(...sectionHeader({ title: NK.survey.title, time: NK.survey.time, count: NK.survey.items.length, relevance: NK.survey.relevance, instructions: NK.survey.instructions }, 9, "INSTRUMEN"));
+body.push(...sectionHeader({ title: NK.survey.title, time: NK.survey.time, count: NK.survey.items.length, relevance: NK.survey.relevance, instructions: NK.survey.instructions }, NI + 1, "INSTRUMEN"));
 const sv = [["No", "Pernyataan", "STS", "TS", "S", "SS"]];
 NK.survey.items.forEach((it, i) => sv.push([String(i + 1), it.s, "", "", "", ""]));
 body.push(table(sv, [600, 6638, 600, 600, 600, 600], { header: true, size: 19 }));
 
 body.push(new Paragraph({ children: [new PageBreak()] }));
-body.push(...sectionHeader({ title: NK.quran.title, time: "±10", count: NK.quran.tasks.length, relevance: NK.quran.relevance, instructions: ["Dilaksanakan individual oleh penguji yang kompeten (guru PAI/ustaz/ustazah).", "Beri skor 1–4 pada setiap aspek sesuai deskriptor rubrik."] }, 10, "INSTRUMEN"));
+body.push(...sectionHeader({ title: NK.quran.title, time: "±10", count: NK.quran.tasks.length, relevance: NK.quran.relevance, instructions: ["Dilaksanakan individual oleh penguji yang kompeten (guru PAI/ustaz/ustazah).", "Beri skor 1–4 pada setiap aspek sesuai deskriptor rubrik."] }, NI + 2, "INSTRUMEN"));
 body.push(P("Tugas peserta:", { bold: true, after: 60 }));
 NK.quran.tasks.forEach((t) => body.push(numbered(t, "quran")));
 body.push(spacer(100));
@@ -487,7 +636,7 @@ body.push(P("Nilai tes baca Al-Qur'an & ibadah = (jumlah skor ÷ 20) × 100.", {
 body.push(P("Catatan penguji: ………………………………………………………………………………………………………………", { size: 19, before: 80 }));
 
 body.push(new Paragraph({ children: [new PageBreak()] }));
-body.push(...sectionHeader({ title: NK.interview.title, time: "±15", count: NK.interview.student.length + NK.interview.parent.length, relevance: NK.interview.relevance, instructions: ["Pewawancara mengajukan pertanyaan inti, lalu menggali dengan pertanyaan lanjutan (Mengapa? Bagaimana? Contohnya?).", "Peserta dilatih menjawab dengan pola STAR: Situation, Task, Action, Result."] }, 11, "INSTRUMEN"));
+body.push(...sectionHeader({ title: NK.interview.title, time: "±15", count: NK.interview.student.length + NK.interview.parent.length, relevance: NK.interview.relevance, instructions: ["Pewawancara mengajukan pertanyaan inti, lalu menggali dengan pertanyaan lanjutan (Mengapa? Bagaimana? Contohnya?).", "Peserta dilatih menjawab dengan pola STAR: Situation, Task, Action, Result."] }, NI + 3, "INSTRUMEN"));
 body.push(P("A. Pertanyaan untuk calon siswa", { bold: true, color: BLUE, after: 60 }));
 body.push(table([["No", "Aspek", "Pertanyaan"], ...NK.interview.student.map((r, i) => [String(i + 1), r[0], r[1]])], [600, 2200, W - 2800], { header: true, size: 19 }));
 body.push(spacer(120));
@@ -512,6 +661,13 @@ SECTIONS.forEach((s, i) => {
     rows.push(row);
   }
   body.push(table(rows, [1927, 1927, 1928, 1928, 1928], { size: 16 }));
+  if (s.essays) {
+    body.push(P(`Lembar Jawaban Uraian — Subtes ${i + 1}`, { bold: true, size: 19, color: NAVY, before: 160, after: 60, keepNext: true }));
+    s.essays.forEach((e, k) => body.push(new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: [W], layout: TableLayoutType.FIXED, rows: [
+      new TableRow({ children: [cell(P(`U${k + 1}. ${e.unit}`, { bold: true, size: 18, after: 0 }), W, { fill: LIGHT })] }),
+      new TableRow({ height: { value: 2000, rule: "atLeast" }, children: [cell(P("", { after: 0 }), W)] }),
+    ] }), spacer(80)));
+  }
 });
 
 // BAGIAN VI — Kunci & Pembahasan
@@ -530,9 +686,18 @@ SECTIONS.forEach((s, i) => {
 body.push(H2("6.2 Pembahasan Lengkap"));
 SECTIONS.forEach((s, i) => {
   body.push(H3(`Subtes ${i + 1}: ${s.title}`));
-  const rows = [["No", "Kunci", "Level", "Materi", "Pembahasan"]];
-  s.items.forEach((it) => { if (it.q !== undefined) rows.push([String(it.no), LETTERS[it.key], `L${it.l}`, it.t, it.e]); });
-  body.push(table(rows, [550, 700, 650, 2000, 5738], { header: true, size: 17, zebra: true }));
+  const rows = [["No", "Kunci", "Level", "Materi & kualifikasi internasional", "Pembahasan"]];
+  s.items.forEach((it) => { if (it.q !== undefined) rows.push([String(it.no), LETTERS[it.key], `L${it.l}`, [P(it.t, { size: 16, bold: true, after: 20, line: 240 }), P(`TIMSS: ${TIMSS_SHORT[it.l]} • PISA ≈ ${PISA_LV[it.l]}`, { size: 15, color: BLUE, after: 20, line: 240 }), P(intlTag(s, it), { size: 15, italics: true, color: "595959", after: 0, line: 240 })], it.e]); });
+  body.push(table(rows, [500, 800, 750, 3400, 4188], { header: true, size: 17, zebra: true }));
+  if (s.essays) {
+    body.push(P(`Pedoman Kode Uraian Subtes ${i + 1} (model coding guide PISA)`, { bold: true, color: NAVY, size: 20, before: 160, after: 80, keepNext: true }));
+    s.essays.forEach((e, k) => {
+      body.push(P([new TextRun({ text: `U${k + 1}. `, bold: true, font: FONT, size: 19 }), ...runs(e.q, { size: 19 })], { after: 40, keepNext: true }));
+      body.push(P(`Kualifikasi: ${e.x.fw} • ${e.x.proc} • ${e.x.fmt} • TIMSS: ${TIMSS_SHORT[e.l]} • PISA ≈ ${PISA_LV[e.l]}`, { size: 16, italics: true, color: BLUE, after: 60, keepNext: true }));
+      body.push(table([["Kode", "Kriteria"], ...e.rubric], [1800, W - 1800], { header: true, size: 17, boldFirstCol: true }));
+      body.push(spacer(100));
+    });
+  }
 });
 
 // BAGIAN VII — Penskoran
@@ -540,6 +705,7 @@ body.push(H1("Bagian VII — Pedoman Penskoran, Interpretasi & Analisis Hasil"))
 body.push(H2("7.1 Nilai per Subtes"));
 body.push(P("Nilai subtes = (jumlah jawaban benar ÷ jumlah soal subtes) × 100. Tidak ada pengurangan untuk jawaban salah.", { align: AlignmentType.JUSTIFIED }));
 body.push(table([["Subtes", "Jumlah soal", "Benar", "Nilai (0–100)"], ...SECTIONS.map((s, i) => [`${i + 1}. ${s.title}`, String(s.count), "", ""])], [5038, 1500, 1500, 1600], { header: true, size: 19, center: true }));
+body.push(P(`Khusus Subtes ${NI}: skor = jumlah benar pilihan ganda (maks. ${INTL.count}) + jumlah kode uraian (maks. ${INTL.essays.length * 2}); nilai = skor ÷ ${INTL.count + INTL.essays.length * 2} × 100. Nilai Subtes ${NI} dilaporkan sebagai Indeks Literasi Internasional dan tidak dimasukkan ke skor komposit sekolah.`, { size: 19, before: 80, align: AlignmentType.JUSTIFIED }));
 body.push(H2("7.2 Skor Komposit per Sekolah Tujuan (Bobot Simulasi)"));
 body.push(P("Skor komposit = Σ (bobot% × nilai subtes) ÷ 100. Bobot berikut disusun penyusun berdasarkan analisis Bagian I untuk keperluan simulasi; bukan bobot resmi sekolah.", { size: 20, align: AlignmentType.JUSTIFIED }));
 body.push(table([["Sekolah", ...WEIGHTS.cols], ...WEIGHTS.rows.map(([n, w]) => [n, ...w.map((x) => (x === 0 ? "–" : `${x}%`))])], [2438, 900, 900, 900, 900, 900, 900, 900, 900], { header: true, center: true, size: 18, boldFirstCol: true }));
@@ -556,7 +722,20 @@ body.push(table([
 ], [1800, 2400, 5438], { header: true, size: 19 }));
 body.push(P("Catatan: ambang di atas adalah ambang kesiapan internal tryout, bukan passing grade resmi sekolah. Komponen non-kognitif (survei karakter, tes baca Al-Qur'an, wawancara) dilaporkan terpisah sebagai profil, tidak dijumlahkan ke skor komposit.", { size: 18, italics: true, before: 80 }));
 
-body.push(H2("7.4 Penskoran Survei Karakter"));
+body.push(H2("7.4 Estimasi Kecakapan Setara Level PISA (Indikatif)"));
+body.push(P("Gunakan persentase jawaban benar pada butir L2 dan L3 di Subtes 2, 3, 4, dan " + NI + " untuk memperkirakan posisi kecakapan peserta. Estimasi ini bersifat indikatif untuk umpan balik belajar dan bukan skor PISA resmi.", { size: 20, align: AlignmentType.JUSTIFIED }));
+body.push(table([
+  ["Pola capaian peserta", "Estimasi setara", "Makna bagi persiapan seleksi unggulan"],
+  ["Benar < 50% pada butir L2", "Di bawah Level 2", "Perkuat konsep dasar dan membaca stimulus; belum siap bersaing."],
+  ["Benar ≥ 50% pada L2, < 40% pada L3", "Level 2–3", "Kecakapan dasar tercapai; latih soal multitahap dan penalaran."],
+  ["Benar ≥ 70% pada L2, 40–69% pada L3", "Level 3–4", "Sasaran minimum tercapai; tingkatkan konsistensi pada soal L3 dan uraian."],
+  ["Benar ≥ 80% pada L2, ≥ 70% pada L3, uraian rata-rata ≥ kode 1,5", "Level 4–5 ke atas", "Kompetitif untuk MAN IC, SMANU, dan Labschool; pertahankan lewat soal tipe olimpiade/PISA Level 5–6."],
+], [3400, 1900, 4338], { header: true, size: 18 }));
+body.push(spacer(80));
+const levelCount = (sec, l) => sec.items.filter((it) => it.q !== undefined && it.l === l).length;
+body.push(table([["Subtes", "Jumlah butir L2", "Jumlah butir L3", "Benar L2", "Benar L3", "Estimasi level"], ...SECTIONS.filter((x) => ["BIN", "MAT", "IPA", "INT"].includes(x.id)).map((x) => [x.title, String(levelCount(x, 2)), String(levelCount(x, 3)), "", "", ""])], [3138, 1300, 1300, 1300, 1300, 1300], { header: true, size: 17, center: true }));
+
+body.push(H2("7.5 Penskoran Survei Karakter"));
 [
   "Butir positif: STS = 1, TS = 2, S = 3, SS = 4. Butir negatif (nomor 3, 6, 8, 12, 15, 20) diberi skor terbalik: STS = 4, TS = 3, S = 2, SS = 1.",
   "Hitung rata-rata per dimensi: Integritas (1–3), Kemandirian (4–6), Ketahanan stres (7–9), Kerja sama (10–12), Regulasi diri (13–15), Motivasi berprestasi (16–17), Religiusitas & toleransi (18–20).",
@@ -566,7 +745,7 @@ body.push(H2("7.4 Penskoran Survei Karakter"));
 const negNums = NK.survey.items.map((it, i) => (it.r ? i + 1 : null)).filter(Boolean).join(", ");
 if (negNums !== "3, 6, 8, 12, 15, 20") throw new Error("Nomor butir negatif survei tidak sesuai pedoman: " + negNums);
 
-body.push(H2("7.5 Panduan Analisis Butir untuk Guru"));
+body.push(H2("7.6 Panduan Analisis Butir untuk Guru"));
 body.push(P("Setelah tryout, lakukan analisis butir agar program remedial tepat sasaran dan bank soal makin berkualitas.", { align: AlignmentType.JUSTIFIED }));
 body.push(table([
   ["Indikator", "Rumus", "Kriteria"],

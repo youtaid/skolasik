@@ -1,0 +1,120 @@
+// Subtes 9 — Literasi Standar Internasional (model unit PISA 2025 & TIMSS)
+// x = kualifikasi internasional per butir: fw (kerangka & domain), proc (proses/kompetensi), ctx (konteks), fmt (format asli yang ditiru)
+module.exports = {
+  id: "INT",
+  title: "Literasi Standar Internasional (Model PISA 2025 & TIMSS)",
+  time: 45,
+  relevance: "MAN IC & Labschool (literasi, penalaran berbasis stimulus), SMANU MH Thamrin (sains–matematika kontekstual), SMA Al Azhar; selaras TKA SMP & Asesmen Nasional",
+  instructions: [
+    "Subtes ini terdiri atas 7 unit stimulus bergaya PISA/TIMSS. Bagian A: 21 soal pilihan ganda. Bagian B: 3 soal uraian (respons terbuka) yang dinilai dengan pedoman kode PISA (skor 2/1/0).",
+    "Bacalah stimulus setiap unit dengan saksama. Data dalam stimulus bersifat ilustratif untuk latihan.",
+  ],
+  items: [
+    { part: "Bagian A — Pilihan Ganda" },
+    { stim: { title: "Unit 1 · Pulau Panas Perkotaan — untuk soal nomor 1–4", paras: [
+      "Kawasan perkotaan sering lebih panas daripada daerah sekitarnya. Fenomena ini disebut pulau panas perkotaan (urban heat island). Sekelompok siswa mengukur suhu udara pada pukul 13.00 di lima lokasi di kota mereka pada hari cerah yang sama. Hasilnya sebagai berikut.",
+      { table: [["Lokasi", "Jenis permukaan dominan", "Suhu udara (°C)"], ["Taman kota", "Pepohonan rindang dan rumput", "30,5"], ["Permukiman berpohon", "Atap genteng, pohon di halaman", "32,0"], ["Jalan raya", "Aspal", "35,5"], ["Pusat perbelanjaan", "Beton dan atap logam, tanpa pohon", "36,0"], ["Danau kota", "Permukaan air", "29,5"]] },
+    ] } },
+    { t: "Unit 1 – menafsirkan data", l: 2, x: { fw: "PISA 2025 Sains – Sistem bumi & lingkungan", proc: "Merancang & mengevaluasi penyelidikan serta menafsirkan data dan bukti", ctx: "Lokal – lingkungan perkotaan", fmt: "Pilihan ganda sederhana" },
+      q: "Selisih suhu antara lokasi terpanas dan lokasi tersejuk adalah …", o: ["6,5 °C", "5,5 °C", "4,0 °C", "7,5 °C"], e: "Terpanas pusat perbelanjaan 36,0 °C, tersejuk danau 29,5 °C → 6,5 °C." },
+    { t: "Unit 1 – menjelaskan fenomena", l: 2, x: { fw: "PISA 2025 Sains – Sistem kehidupan & fisik", proc: "Menjelaskan fenomena secara ilmiah", ctx: "Lokal – lingkungan perkotaan", fmt: "Pilihan ganda sederhana" },
+      q: "Penjelasan ilmiah yang paling tepat mengapa taman kota lebih sejuk daripada jalan raya adalah …", o: ["Pepohonan menaungi permukaan dan melepaskan uap air melalui transpirasi yang menyerap kalor", "Pepohonan menghasilkan oksigen yang suhunya lebih rendah daripada udara", "Aspal menghasilkan panas sendiri walaupun tidak terkena sinar matahari", "Angin hanya bertiup di taman kota dan tidak di jalan raya"], e: "Naungan mengurangi penyerapan radiasi matahari oleh permukaan, dan penguapan air (transpirasi) menyerap kalor laten sehingga udara lebih sejuk." },
+    { t: "Unit 1 – mengevaluasi desain penyelidikan", l: 3, x: { fw: "PISA 2025 Sains – Pengetahuan prosedural & epistemik", proc: "Merancang & mengevaluasi penyelidikan serta menafsirkan data dan bukti", ctx: "Lokal – lingkungan perkotaan", fmt: "Pilihan ganda sederhana" },
+      q: "Seorang siswa menyimpulkan, “Warna permukaan menentukan suhu udara.” Alasan paling tepat bahwa data di atas belum cukup untuk mendukung simpulan itu adalah …", o: ["Setiap lokasi berbeda dalam lebih dari satu faktor (bahan, warna, keberadaan pohon dan air), sehingga pengaruh warna tidak dapat dipisahkan", "Jumlah lokasi yang diukur terlalu banyak", "Pengukuran dilakukan pada siang hari", "Suhu diukur dalam derajat Celsius, bukan Kelvin"], e: "Untuk menguji satu faktor, faktor lain harus dikendalikan. Data observasional ini mencampurkan banyak variabel." },
+    { t: "Unit 1 – menggunakan informasi untuk keputusan", l: 3, x: { fw: "PISA 2025 Sains – Agency in the Anthropocene", proc: "Meneliti, mengevaluasi, dan menggunakan informasi ilmiah untuk pengambilan keputusan dan tindakan", ctx: "Lokal/nasional – kebijakan lingkungan", fmt: "Pilihan ganda sederhana" },
+      q: "Pemerintah kota ingin menurunkan suhu di sekitar pusat perbelanjaan dengan anggaran terbatas. Kebijakan yang paling didukung oleh data adalah …", o: ["Menanam pohon peneduh dan membuat taman di sekitar area parkir", "Mengganti lampu jalan dengan lampu hemat energi", "Memperlebar jalan beraspal agar lalu lintas lancar", "Menambah jumlah papan reklame di sekitar gedung"], e: "Data menunjukkan lokasi bervegetasi dan berair paling sejuk; menambah vegetasi adalah tindakan yang berbasis bukti." },
+
+    { stim: { title: "Unit 2 · Paket Data Internet — untuk soal nomor 5–7", paras: [
+      "Sebuah operator menawarkan tiga paket bulanan berikut.",
+      { table: [["Paket", "Biaya per bulan", "Kuota", "Biaya kelebihan pemakaian"], ["Hemat", "Rp30.000", "10 GB", "Rp5.000 per GB"], ["Pelajar", "Rp45.000", "20 GB", "Rp4.000 per GB"], ["Bebas", "Rp75.000", "Tanpa batas", "–"]] },
+    ] } },
+    { t: "Unit 2 – menerapkan prosedur", l: 2, x: { fw: "PISA Matematika – Quantity; TIMSS: Bilangan", proc: "Menerapkan konsep, fakta, dan prosedur (employ)", ctx: "Personal", fmt: "Pilihan ganda sederhana" },
+      q: "Nadia memakai 14 GB per bulan dengan Paket Hemat. Biaya yang dibayarnya dalam sebulan adalah …", o: ["Rp50.000", "Rp45.000", "Rp70.000", "Rp30.000"], e: "Kelebihan 4 GB × Rp5.000 = Rp20.000; total Rp30.000 + Rp20.000 = Rp50.000." },
+    { t: "Unit 2 – merumuskan model", l: 3, x: { fw: "PISA Matematika – Change & Relationships; TIMSS: Aljabar", proc: "Merumuskan situasi secara matematis (formulate)", ctx: "Personal", fmt: "Pilihan ganda sederhana" },
+      q: "Pada pemakaian berapa GB per bulan biaya Paket Hemat sama dengan biaya Paket Pelajar?", o: ["13 GB", "15 GB", "12 GB", "20 GB"], e: "Untuk 10 < x ≤ 20: 30.000 + 5.000(x − 10) = 45.000 → x − 10 = 3 → x = 13 GB." },
+    { t: "Unit 2 – menafsirkan & mengevaluasi", l: 3, x: { fw: "PISA Matematika – Quantity; penalaran matematis", proc: "Menafsirkan, menerapkan, dan mengevaluasi hasil (interpret)", ctx: "Personal", fmt: "Pilihan ganda sederhana" },
+      q: "Untuk pemakaian 28 GB per bulan, pernyataan yang tepat adalah …", o: ["Paket Bebas paling murah, selisih Rp2.000 dari Paket Pelajar", "Paket Pelajar paling murah, selisih Rp2.000 dari Paket Bebas", "Paket Hemat paling murah karena biaya dasarnya terendah", "Paket Pelajar dan Paket Bebas biayanya sama"], e: "Hemat: 30.000 + 18 × 5.000 = Rp120.000. Pelajar: 45.000 + 8 × 4.000 = Rp77.000. Bebas: Rp75.000 → Bebas termurah, selisih Rp2.000." },
+
+    { stim: { title: "Unit 3 · Gula dalam Minuman Kemasan — untuk soal nomor 8–10", paras: [
+      "SUMBER A — Unggahan blog pribadi “Minum Manis Tanpa Takut”",
+      "“Saya minum dua botol teh manis kemasan setiap hari sejak SMP dan sampai sekarang tetap bugar. Jadi, anggapan bahwa gula berbahaya hanyalah mitos. Lagi pula, gula adalah sumber energi utama bagi otak!”",
+      "SUMBER B — Infografik lembaga kesehatan",
+      "Anjuran konsumsi gula maksimal 50 gram (setara 4 sendok makan) per orang per hari. Satu botol teh manis kemasan 350 mL rata-rata mengandung 25–30 gram gula. Konsumsi gula berlebih dalam jangka panjang meningkatkan risiko obesitas dan diabetes tipe 2.",
+    ] } },
+    { t: "Unit 3 – mengintegrasikan informasi", l: 2, x: { fw: "PISA Membaca – teks multisumber", proc: "Memahami: mengintegrasikan dan menarik inferensi lintas sumber", ctx: "Personal – kesehatan", fmt: "Pilihan ganda sederhana" },
+      q: "Berdasarkan Sumber B, kebiasaan penulis Sumber A berarti ia mengonsumsi gula dari minuman saja sebanyak …", o: ["50–60 gram per hari, mencapai atau melampaui batas anjuran", "25–30 gram per hari, setengah dari batas anjuran", "350 gram per hari, tujuh kali batas anjuran", "4 sendok makan per minggu, di bawah batas anjuran"], e: "Dua botol × 25–30 g = 50–60 g, sama dengan atau melebihi batas 50 g per hari." },
+    { t: "Unit 3 – menilai kredibilitas sumber", l: 3, x: { fw: "PISA Membaca – teks multisumber", proc: "Mengevaluasi & merefleksi: menilai kualitas dan kredibilitas", ctx: "Personal – kesehatan", fmt: "Pilihan ganda sederhana" },
+      q: "Alasan paling tepat bahwa Sumber B lebih dapat dipercaya daripada Sumber A adalah …", o: ["Sumber B disusun lembaga kesehatan dan menyajikan data terukur, bukan pengalaman satu orang", "Sumber B lebih panjang daripada Sumber A", "Sumber B disajikan dalam bentuk gambar yang menarik", "Penulis Sumber A tidak menyukai minuman tanpa gula"], e: "Kredibilitas dinilai dari otoritas penulis/lembaga dan kualitas bukti, bukan panjang teks atau tampilan." },
+    { t: "Unit 3 – merefleksi penalaran", l: 3, x: { fw: "PISA Membaca – teks multisumber", proc: "Mengevaluasi & merefleksi: menilai isi dan penalaran", ctx: "Personal – kesehatan", fmt: "Pilihan ganda sederhana" },
+      q: "Kelemahan utama penalaran pada Sumber A adalah …", o: ["Menarik kesimpulan umum hanya dari pengalaman satu orang", "Menggunakan terlalu banyak data statistik", "Tidak menyebutkan merek teh yang diminum", "Menggunakan istilah ilmiah yang sulit dipahami"], e: "Generalisasi tergesa-gesa: pengalaman satu orang tidak dapat membuktikan dampak bagi populasi." },
+
+    { stim: { title: "Unit 4 · Perkecambahan Kacang Hijau — untuk soal nomor 11–13", paras: [
+      "Rina menanam 10 biji kacang hijau di atas kapas basah dalam setiap gelas. Keempat gelas diletakkan pada suhu ruang yang sama. Hasil pengamatan pada hari ke-5:",
+      { table: [["Gelas", "Cahaya", "Air per hari", "Biji berkecambah", "Tinggi rata-rata (cm)"], ["P", "Terang", "10 mL", "9", "6"], ["Q", "Gelap", "10 mL", "9", "11"], ["R", "Terang", "0 mL", "0", "0"], ["S", "Gelap", "0 mL", "0", "0"]] },
+    ] } },
+    { t: "Unit 4 – menafsirkan bukti", l: 2, x: { fw: "PISA 2025 Sains – Sistem kehidupan; TIMSS: Biologi", proc: "Merancang & mengevaluasi penyelidikan serta menafsirkan data dan bukti", ctx: "Personal – percobaan sekolah", fmt: "Pilihan ganda sederhana" },
+      q: "Simpulan yang didukung oleh data percobaan Rina adalah …", o: ["Air diperlukan agar biji kacang hijau dapat berkecambah", "Cahaya diperlukan agar biji kacang hijau dapat berkecambah", "Kecambah di tempat terang tumbuh lebih tinggi", "Pemberian air tidak memengaruhi perkecambahan"], e: "Gelas tanpa air (R, S) tidak berkecambah, sedangkan gelas gelap berair (Q) tetap berkecambah → cahaya tidak diperlukan untuk berkecambah, air diperlukan." },
+    { t: "Unit 4 – menjelaskan fenomena", l: 3, x: { fw: "PISA 2025 Sains – Sistem kehidupan; TIMSS: Biologi", proc: "Menjelaskan fenomena secara ilmiah", ctx: "Personal – percobaan sekolah", fmt: "Pilihan ganda sederhana" },
+      q: "Kecambah di gelas Q lebih tinggi daripada di gelas P. Penjelasan yang paling tepat adalah …", o: ["Di tempat gelap hormon auksin tidak terurai oleh cahaya sehingga pemanjangan sel berlangsung lebih cepat (etiolasi)", "Fotosintesis berlangsung lebih cepat di tempat gelap", "Gelas Q mendapat air lebih banyak daripada gelas P", "Biji di gelas Q berasal dari varietas yang lebih tinggi"], e: "Etiolasi: tanpa cahaya, auksin aktif lebih banyak sehingga batang memanjang cepat, tetapi pucat dan lemah." },
+    { t: "Unit 4 – merancang perbandingan yang adil", l: 3, x: { fw: "PISA 2025 Sains – Pengetahuan prosedural; TIMSS: Menalar", proc: "Merancang & mengevaluasi penyelidikan serta menafsirkan data dan bukti", ctx: "Personal – percobaan sekolah", fmt: "Pilihan ganda sederhana" },
+      q: "Untuk mengetahui pengaruh cahaya terhadap tinggi kecambah, pasangan gelas yang paling tepat dibandingkan adalah …", o: ["P dan Q", "P dan R", "Q dan R", "R dan S"], e: "P dan Q hanya berbeda pada cahaya, dan keduanya tumbuh sehingga tinggi dapat dibandingkan. R dan S tidak tumbuh sama sekali." },
+
+    { stim: { title: "Unit 5 · Tangki Air Sekolah — untuk soal nomor 14–16", paras: [
+      "Tangki air sekolah berkapasitas 2.000 liter berisi 1.200 liter pada pukul 06.00. Dari pukul 06.00 sampai 08.00, air dipakai dengan laju tetap 150 liter/jam tanpa pengisian. Mulai pukul 08.00, pompa mengisi tangki dengan laju 250 liter/jam, sementara pemakaian tetap 150 liter/jam.",
+    ] } },
+    { t: "Unit 5 – menerapkan laju perubahan", l: 2, x: { fw: "PISA Matematika – Change & Relationships; TIMSS: Aljabar", proc: "Menerapkan konsep, fakta, dan prosedur (employ)", ctx: "Sosial – fasilitas sekolah", fmt: "Pilihan ganda sederhana" },
+      q: "Volume air dalam tangki pada pukul 08.00 adalah …", o: ["900 liter", "1.000 liter", "700 liter", "1.500 liter"], e: "1.200 − 2 × 150 = 900 liter." },
+    { t: "Unit 5 – penalaran multitahap", l: 3, x: { fw: "PISA Matematika – Change & Relationships; TIMSS: Menalar", proc: "Merumuskan dan menerapkan (formulate–employ)", ctx: "Sosial – fasilitas sekolah", fmt: "Pilihan ganda sederhana" },
+      q: "Tangki akan penuh pada pukul …", o: ["19.00", "17.00", "16.00", "20.00"], e: "Laju bersih +100 L/jam. Kekurangan 2.000 − 900 = 1.100 L → 11 jam setelah 08.00 = pukul 19.00." },
+    { t: "Unit 5 – representasi aljabar", l: 3, x: { fw: "PISA Matematika – Change & Relationships; TIMSS: Aljabar", proc: "Merumuskan situasi secara matematis (formulate)", ctx: "Sosial – fasilitas sekolah", fmt: "Pilihan ganda sederhana" },
+      q: "Jika V adalah volume air (liter) t jam setelah pukul 08.00 (sebelum tangki penuh), persamaan yang tepat adalah …", o: ["V = 900 + 100t", "V = 1.200 + 100t", "V = 900 + 250t", "V = 1.200 − 150t"], e: "Nilai awal 900 L pada t = 0, laju bersih 250 − 150 = 100 L/jam." },
+
+    { stim: { title: "Unit 6 · Robot Pengantar Buku — untuk soal nomor 17–19", paras: [
+      "Sebuah robot bergerak pada petak 5 × 5. Kolom diberi nama A–E (kiri ke kanan) dan baris 1–5 (bawah ke atas). Robot mula-mula berada di petak A1 dan menghadap ke atas (utara). Kotak C3 berisi rak buku sehingga tidak boleh dilewati.",
+      "Perintah yang tersedia: MAJU(n) = maju n petak sesuai arah hadap; KANAN = berputar 90° searah jarum jam di tempat; KIRI = berputar 90° berlawanan arah jarum jam di tempat.",
+      { nohead: true, table: [["5", "", "", "", "", ""], ["4", "", "", "", "", ""], ["3", "", "", "RAK", "", ""], ["2", "", "", "", "", ""], ["1", "ROBOT ↑", "", "", "", ""], ["", "A", "B", "C", "D", "E"]] },
+    ] } },
+    { t: "Unit 6 – menelusuri algoritma", l: 2, x: { fw: "PISA 2025 Learning in the Digital World – berpikir komputasional", proc: "Menelusuri dan menjalankan algoritma", ctx: "Sekolah – otomasi", fmt: "Pilihan ganda sederhana" },
+      q: "Robot menjalankan program: MAJU(3), KANAN, MAJU(2). Posisi akhir robot adalah …", o: ["C4", "B4", "C3", "D4"], e: "A1 → MAJU(3) → A4; KANAN → menghadap timur; MAJU(2) → C4." },
+    { t: "Unit 6 – debugging", l: 3, x: { fw: "PISA 2025 Learning in the Digital World – berpikir komputasional", proc: "Menguji dan memperbaiki (debugging) solusi", ctx: "Sekolah – otomasi", fmt: "Pilihan ganda sederhana" },
+      q: "Dina menulis program MAJU(2), KANAN, MAJU(4) agar robot tiba di E3, tetapi program itu gagal. Penyebabnya adalah …", o: ["Robot akan melewati kotak C3 yang berisi rak", "Robot menghadap ke barat setelah perintah KANAN", "Perintah MAJU(4) membuat robot keluar dari petak", "Robot seharusnya mulai dengan menghadap ke timur"], e: "A1 → A3, lalu menghadap timur dan maju melewati B3 → C3 (rak). Petak tujuan E3 sendiri masih di dalam grid." },
+    { t: "Unit 6 – merancang algoritma", l: 3, x: { fw: "PISA 2025 Learning in the Digital World – berpikir komputasional", proc: "Merancang algoritma dan mengevaluasi solusi", ctx: "Sekolah – otomasi", fmt: "Pilihan ganda sederhana" },
+      q: "Program berikut yang membawa robot dari A1 ke E3 tanpa melewati C3 adalah …", o: ["MAJU(4), KANAN, MAJU(4), KANAN, MAJU(2)", "MAJU(2), KANAN, MAJU(4)", "KANAN, MAJU(4), KIRI, MAJU(3)", "KANAN, MAJU(2), KIRI, MAJU(2), KANAN, MAJU(2)"], e: "A1 → A5 → (timur) E5 → (selatan) E3 tanpa menyentuh C3. Pilihan lain melewati C3 atau berhenti di E4." },
+
+    { stim: { title: "Unit 7 · Online Cultural Exchange (model PISA 2025 English as a Foreign Language) — untuk soal nomor 20–21", paras: [
+      "From: Ms. Clara, Exchange Program Coordinator",
+      "To: All Grade 9 students   |   Subject: Online Cultural Exchange with Students in Japan",
+      "Dear students,",
+      "Next month, our school will hold a four-week online exchange with a junior high school in Osaka. Every Thursday from 15.30 to 16.30, you will meet your Japanese partners on a video call to present a topic about Indonesian culture. In the final week, each group will create a short video comparing a tradition from both countries.",
+      "If you are interested, fill in the online form by 20 March. Because the program is conducted in English, you also need to attach a 100-word paragraph explaining why you want to join. Places are limited to 24 students.",
+      "Best regards, Ms. Clara",
+    ] } },
+    { t: "Unit 7 – memahami informasi", l: 2, x: { fw: "PISA 2025 English as a Foreign Language – Reading; CEFR A2–B1", proc: "Understanding: locating and comprehending information", ctx: "Educational – school program", fmt: "Pilihan ganda sederhana" },
+      q: "What will the students do in the final week of the program?", o: ["Make a short video comparing a tradition from both countries", "Visit the school in Osaka", "Fill in the online registration form", "Write a 100-word paragraph about Japan"], e: "‘In the final week, each group will create a short video comparing a tradition from both countries.’" },
+    { t: "Unit 7 – menerapkan informasi", l: 3, x: { fw: "PISA 2025 English as a Foreign Language – Reading; CEFR B1", proc: "Applying information to a new situation", ctx: "Educational – school program", fmt: "Pilihan ganda sederhana" },
+      q: "Which student has followed all the instructions in the email?", o: ["Tono, who filled in the form on 18 March and attached a 100-word paragraph about his reasons", "Sinta, who filled in the form on 22 March with a 100-word paragraph", "Bayu, who filled in the form on 15 March and sent a video instead of a paragraph", "Lia, who filled in the form on 10 March but can only join on Wednesdays"], e: "Only Tono meets the deadline (by 20 March), attaches the required paragraph, and has no schedule conflict (meetings are on Thursdays)." },
+  ],
+  essays: [
+    { unit: "Unit 1 · Pulau Panas Perkotaan", l: 3, x: { fw: "PISA 2025 Sains – Pengetahuan prosedural", proc: "Merancang & mengevaluasi penyelidikan ilmiah", fmt: "Respons terbuka (open constructed response)" },
+      q: "Rancanglah percobaan sederhana untuk menguji apakah warna atap (gelap atau terang) memengaruhi suhu ruangan di bawahnya. Tuliskan (a) variabel yang diubah, (b) variabel yang diukur, dan (c) dua variabel yang harus dikendalikan.",
+      rubric: [
+        ["Skor 2 (penuh)", "Menyebut variabel bebas = warna atap, variabel terikat = suhu ruangan/udara di bawah atap, DAN minimal dua variabel kontrol yang tepat (mis. bahan dan ukuran atap/kotak sama, lama dan waktu penyinaran sama, posisi termometer sama, lokasi/cuaca sama)."],
+        ["Skor 1 (sebagian)", "Variabel bebas dan terikat benar, tetapi variabel kontrol hanya satu atau kurang tepat; ATAU variabel kontrol tepat tetapi salah satu variabel bebas/terikat keliru."],
+        ["Skor 0", "Jawaban tidak relevan, hanya mengulang soal, atau variabel bebas dan terikat tertukar/keliru."],
+      ] },
+    { unit: "Unit 2 · Paket Data Internet", l: 3, x: { fw: "PISA Matematika – penalaran matematis", proc: "Menafsirkan & mengevaluasi; mengomunikasikan argumen", fmt: "Respons terbuka (open constructed response)" },
+      q: "Nadia berpendapat, “Paket Bebas selalu paling menguntungkan bagi siapa pun.” Apakah kamu setuju? Jelaskan jawabanmu disertai perhitungan.",
+      rubric: [
+        ["Skor 2 (penuh)", "Tidak setuju, disertai perhitungan yang menunjukkan batas umum: Paket Hemat termurah untuk pemakaian kurang dari 13 GB, Paket Pelajar termurah untuk 13–27,5 GB (biaya Pelajar < Rp75.000 bila 45.000 + 4.000(x − 20) < 75.000 → x < 27,5), dan Paket Bebas baru termurah di atas ±27,5 GB."],
+        ["Skor 1 (sebagian)", "Tidak setuju dengan minimal satu contoh perhitungan yang benar (mis. untuk 14 GB Paket Hemat Rp50.000 < Rp75.000), tetapi tanpa menentukan batas pemakaian secara umum."],
+        ["Skor 0", "Setuju, atau tidak setuju tanpa perhitungan/argumen yang benar."],
+      ] },
+    { unit: "Unit 6 · Robot Pengantar Buku", l: 3, x: { fw: "PISA 2025 Learning in the Digital World – berpikir komputasional", proc: "Merancang algoritma yang efisien", fmt: "Respons terbuka (open constructed response)" },
+      q: "Tuliskan program dengan jumlah perintah paling sedikit yang membawa robot dari A1 ke E3 tanpa melewati C3. Jelaskan mengapa program dengan perintah yang lebih sedikit tidak mungkin.",
+      rubric: [
+        ["Skor 2 (penuh)", "Menulis program 4 perintah yang valid, yaitu KANAN, MAJU(4), KIRI, MAJU(2), DAN menjelaskan bahwa rute 3 perintah (MAJU, belok, MAJU) hanya mungkin lewat jalur A3 → E3 yang melewati C3, sehingga diperlukan belokan di awal."],
+        ["Skor 1 (sebagian)", "Menulis program 4 perintah yang valid tanpa penjelasan yang memadai, ATAU program valid lebih dari 4 perintah disertai penjelasan logis."],
+        ["Skor 0", "Program tidak sampai di E3, melewati C3, atau tidak ada jawaban."],
+      ] },
+  ],
+};
