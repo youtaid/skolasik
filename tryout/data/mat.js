@@ -1,0 +1,43 @@
+// Subtes 3 — Matematika (penalaran matematika, materi SMP/MTs kelas VII–IX)
+module.exports = {
+  id: "MAT",
+  title: "Matematika (Penalaran Matematika)",
+  time: 50,
+  relevance: "MAN IC (Penalaran Matematika), Labschool (Tes Akademik & Kuantitatif), SMANU MH Thamrin (Tes Akademik), SMA Al Azhar",
+  instructions: [
+    "Kerjakan pada lembar coretan yang disediakan. Kalkulator tidak diperkenankan.",
+    "Gunakan π = 22/7 atau 3,14 sesuai petunjuk soal.",
+  ],
+  items: [
+    { part: "Bilangan & Aljabar (soal 1–13)." },
+    { t: "Bilangan bulat", l: 1, q: "Hasil dari (−3)³ + 4² × 2 − (−10) adalah …", o: ["15", "−49", "49", "−5"], e: "(−3)³ = −27; 4² × 2 = 32; −27 + 32 + 10 = 15." },
+    { t: "Bilangan berpangkat", l: 2, q: "Bentuk sederhana dari (2⁵ × 4³) : 8³ adalah …", o: ["4", "2", "8", "16"], e: "2⁵ × 2⁶ : 2⁹ = 2^(5+6−9) = 2² = 4." },
+    { t: "Bentuk akar", l: 2, q: "Hasil dari √50 + √18 − √32 adalah …", o: ["4√2", "2√2", "6√2", "12√2"], e: "5√2 + 3√2 − 4√2 = 4√2." },
+    { t: "Merasionalkan penyebut", l: 2, q: "Bentuk rasional dari 6 / (√5 − √2) adalah …", o: ["2√5 + 2√2", "2√5 − 2√2", "6√5 + 6√2", "√5 + √2"], e: "6(√5 + √2) / (5 − 2) = 2(√5 + √2) = 2√5 + 2√2." },
+    { t: "Persamaan linear satu variabel", l: 1, q: "Nilai x yang memenuhi 3(2x − 1) − 2(x + 4) = 9 adalah …", o: ["5", "4", "3", "6"], e: "6x − 3 − 2x − 8 = 9 → 4x = 20 → x = 5." },
+    { t: "Pertidaksamaan linear", l: 2, q: "Himpunan penyelesaian dari 5 − 2x > 3x − 10 untuk x bilangan asli adalah …", o: ["{1, 2}", "{1, 2, 3}", "{0, 1, 2}", "{3, 4, 5, …}"], e: "15 > 5x → x < 3. Bilangan asli yang memenuhi: 1 dan 2." },
+    { t: "SPLDV (kontekstual)", l: 3, q: "Harga 2 buku dan 3 pensil adalah Rp21.000,00, sedangkan harga 3 buku dan 2 pensil adalah Rp24.000,00. Harga 1 buku dan 1 pensil adalah …", o: ["Rp9.000,00", "Rp8.000,00", "Rp10.000,00", "Rp9.500,00"], e: "Jumlahkan kedua persamaan: 5b + 5p = 45.000 → b + p = 9.000. (Tidak perlu mencari b dan p satu per satu.)" },
+    { t: "Fungsi linear", l: 2, q: "Diketahui f(x) = ax + b, f(2) = 7, dan f(5) = 16. Nilai f(−3) adalah …", o: ["−8", "−10", "−6", "8"], e: "3a = 9 → a = 3; b = 1. f(−3) = −9 + 1 = −8." },
+    { t: "Persamaan garis", l: 3, q: "Persamaan garis yang melalui titik (1, 3) dan tegak lurus garis yang melalui titik (−2, 5) dan (4, −7) adalah …", o: ["x − 2y + 5 = 0", "2x + y − 5 = 0", "x + 2y − 7 = 0", "x − 2y − 5 = 0"], e: "Gradien garis awal = (−7 − 5)/(4 + 2) = −2, gradien tegak lurus = 1/2. y − 3 = ½(x − 1) → x − 2y + 5 = 0." },
+    { t: "Persamaan kuadrat", l: 3, q: "Akar-akar persamaan x² − 5x + 6 = 0 adalah p dan q. Nilai p² + q² adalah …", o: ["13", "25", "12", "19"], e: "p + q = 5, pq = 6. p² + q² = (p + q)² − 2pq = 25 − 12 = 13." },
+    { t: "Fungsi kuadrat", l: 2, q: "Koordinat titik puncak grafik f(x) = x² − 6x + 5 adalah …", o: ["(3, −4)", "(−3, 32)", "(3, 4)", "(6, 5)"], e: "x = −b/2a = 3; f(3) = 9 − 18 + 5 = −4." },
+    { t: "Barisan & deret aritmetika", l: 3, q: "Pada barisan aritmetika diketahui U₃ = 11 dan U₇ = 23. Jumlah 10 suku pertama barisan tersebut adalah …", o: ["185", "170", "200", "155"], e: "4b = 12 → b = 3, a = 5. S₁₀ = 10/2 × (2·5 + 9·3) = 5 × 37 = 185." },
+    { t: "Barisan geometri (kontekstual)", l: 3, q: "Suatu bakteri membelah diri menjadi dua setiap 20 menit. Jika mula-mula terdapat 50 bakteri, banyak bakteri setelah 2 jam adalah …", o: ["3.200", "1.600", "6.400", "600"], e: "2 jam = 6 kali pembelahan → 50 × 2⁶ = 3.200." },
+
+    { part: "Geometri & Pengukuran (soal 14–20)." },
+    { t: "Teorema Pythagoras", l: 3, q: "Sebuah tangga sepanjang 5 m bersandar pada dinding tegak dengan kaki tangga berjarak 3 m dari dinding. Jika kaki tangga digeser menjauhi dinding sejauh 1 m, ujung atas tangga turun sejauh …", o: ["1 m", "0,5 m", "2 m", "1,5 m"], e: "Tinggi awal √(25 − 9) = 4 m. Tinggi akhir √(25 − 16) = 3 m. Turun 1 m." },
+    { t: "Lingkaran – panjang busur", l: 2, q: "Panjang busur lingkaran berjari-jari 10 cm dengan sudut pusat 72° adalah … (π = 3,14)", o: ["12,56 cm", "62,8 cm", "25,12 cm", "31,4 cm"], e: "72/360 × 2 × 3,14 × 10 = 0,2 × 62,8 = 12,56 cm." },
+    { t: "Garis singgung persekutuan", l: 3, q: "Dua lingkaran berjari-jari 7 cm dan 2 cm memiliki jarak kedua pusat 13 cm. Panjang garis singgung persekutuan luarnya adalah …", o: ["12 cm", "13 cm", "10 cm", "8 cm"], e: "l = √(d² − (R − r)²) = √(169 − 25) = √144 = 12 cm." },
+    { t: "Kesebangunan (kontekstual)", l: 2, q: "Pada saat yang sama, bayangan sebuah tiang bendera 6 m dan bayangan tongkat setinggi 1,5 m adalah 2 m. Tinggi tiang bendera adalah …", o: ["4,5 m", "8 m", "3 m", "5 m"], e: "t/6 = 1,5/2 → t = 4,5 m." },
+    { t: "Bangun ruang – tabung", l: 1, q: "Volume tabung dengan jari-jari alas 7 cm dan tinggi 10 cm adalah … (π = 22/7)", o: ["1.540 cm³", "3.080 cm³", "440 cm³", "770 cm³"], e: "V = 22/7 × 7 × 7 × 10 = 1.540 cm³." },
+    { t: "Bangun ruang – kerucut", l: 2, q: "Luas permukaan kerucut dengan jari-jari alas 6 cm dan tinggi 8 cm adalah …", o: ["96π cm²", "60π cm²", "36π cm²", "132π cm²"], e: "s = √(36 + 64) = 10. L = πr(r + s) = π × 6 × 16 = 96π cm²." },
+    { t: "Bangun ruang gabungan (HOTS)", l: 3, q: "Sebuah bola dimasukkan ke dalam kubus berusuk 12 cm sehingga bola menyinggung keenam sisi kubus. Volume ruang di dalam kubus yang tidak ditempati bola adalah … (π = 3,14)", o: ["823,68 cm³", "904,32 cm³", "1.728 cm³", "1.152 cm³"], e: "r = 6. V kubus = 1.728; V bola = 4/3 × 3,14 × 216 = 904,32. Selisih = 823,68 cm³." },
+
+    { part: "Statistika, Peluang & Transformasi (soal 21–25)." },
+    { t: "Statistika – rata-rata & median", l: 3, q: "Data nilai: 6, 7, 7, 8, 8, 8, 9, 10, x memiliki rata-rata 8. Nilai x dan median data tersebut berturut-turut adalah …", o: ["9 dan 8", "9 dan 8,5", "8 dan 8", "10 dan 9"], e: "Jumlah 8 data = 63; 9 × 8 = 72 → x = 9. Data terurut: 6, 7, 7, 8, 8, 8, 9, 9, 10 → median (data ke-5) = 8." },
+    { t: "Statistika – rata-rata gabungan", l: 2, q: "Rata-rata nilai 30 siswa kelas A adalah 76 dan rata-rata nilai 20 siswa kelas B adalah 81. Rata-rata nilai gabungan kedua kelas adalah …", o: ["78", "78,5", "77", "79"], e: "(30 × 76 + 20 × 81) / 50 = (2.280 + 1.620) / 50 = 78." },
+    { t: "Peluang – dua dadu", l: 2, q: "Dua dadu dilempar bersamaan satu kali. Peluang muncul jumlah mata dadu 8 adalah …", o: ["5/36", "1/6", "1/9", "7/36"], e: "Pasangan (2,6), (3,5), (4,4), (5,3), (6,2) = 5 dari 36 kemungkinan." },
+    { t: "Peluang – pengambilan sekaligus", l: 3, q: "Sebuah kantong berisi 4 kelereng merah dan 6 kelereng biru. Diambil 2 kelereng sekaligus secara acak. Peluang terambil keduanya merah adalah …", o: ["2/15", "4/25", "1/5", "6/25"], e: "C(4,2)/C(10,2) = 6/45 = 2/15." },
+    { t: "Transformasi geometri", l: 3, q: "Titik A(3, −2) dirotasi 90° berlawanan arah jarum jam dengan pusat O(0, 0), kemudian dicerminkan terhadap sumbu X. Koordinat bayangan akhir titik A adalah …", o: ["(2, −3)", "(−2, 3)", "(2, 3)", "(−3, 2)"], e: "Rotasi 90°: (x, y) → (−y, x) = (2, 3). Pencerminan sumbu X: (2, 3) → (2, −3)." },
+  ],
+};
