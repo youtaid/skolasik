@@ -257,7 +257,7 @@ function renderStim(st, sec) {
       ch.push(spacer(60));
       return;
     }
-    ch.push(st.stim.rtl ? P(t, { rtl: true, align: AlignmentType.RIGHT, after: 60, size: 24 }) : P(t, { size: 21, align: AlignmentType.JUSTIFIED, after: 70 }));
+    ch.push(st.stim.rtl ? P(t, { rtl: true, align: AlignmentType.RIGHT, after: 80, size: 24, line: 400 }) : P(t, { size: 21, align: AlignmentType.JUSTIFIED, after: 70 }));
   });
   return [box(ch, "F7F9FC"), spacer(100)];
 }
@@ -270,6 +270,79 @@ function sectionHeader(sec, idx, label = "SUBTES") {
       new TableRow({ children: [cell([P(info, { size: 18, after: 60 }), ...sec.instructions.map((t) => bullet(t, 0, { size: 18, after: 30 }))], W, { fill: LIGHT, borders: NOBORDERS })] }),
     ],
   }), spacer(160)];
+}
+
+// ---------- blok per subtes (dipakai dokumen gabungan & per mapel) ----------
+function kisiBlock(s) {
+  const groups = new Map();
+  s.items.forEach((it) => { if (it.q === undefined) return; if (!groups.has(it.t)) groups.set(it.t, []); groups.get(it.t).push(it); });
+  const rows = [["Materi / Indikator", "No.", "Bentuk", "Level", "Konteks", "Domain TIMSS", "Kualifikasi internasional"]];
+  const uniq = (arr) => [...new Set(arr)].join("/");
+  for (const [t, its] of groups) rows.push([t, its.map((x) => x.no).join(", "), uniq(its.map((x) => FORMAT[x.type])), uniq(its.map((x) => `L${x.l}`)), uniq(its.map((x) => (x.c ? "Ya" : "Tidak"))), uniq(its.map((x) => TIMSS_SHORT[x.l])), uniq(its.map((x) => intlTag(s, x)))]);
+  if (s.essays) s.essays.forEach((e, k) => rows.push([`Uraian – ${e.unit}`, `U${k + 1}`, "Uraian", `L${e.l}`, "Ya", TIMSS_SHORT[e.l], `${e.x.fw} • ${e.x.proc}`]));
+  return [table(rows, [2300, 800, 1150, 650, 800, 1100, 2838], { header: true, size: 15, zebra: true })];
+}
+function naskahBlock(s, i, ljkRef) {
+  const out = [...sectionHeader(s, i + 1)];
+  s.items.forEach((it) => {
+    if (it.part) out.push(P(it.part, { bold: true, color: BLUE, size: 21, before: 120, after: 100, keepNext: true }));
+    else if (it.stim) out.push(...renderStim(it, s));
+    else out.push(...renderQuestion(it));
+  });
+  if (s.essays) {
+    out.push(P("Bagian B — Uraian (respons terbuka model PISA)", { bold: true, color: BLUE, size: 21, before: 160, after: 100, keepNext: true }));
+    s.essays.forEach((e, k) => {
+      out.push(P([new TextRun({ text: `U${k + 1}.\t`, bold: true, font: FONT, size: 22 }), new TextRun({ text: `[${e.unit}] `, italics: true, font: FONT, size: 20, color: BLUE }), ...runs(e.q)], { indent: { left: QIND + 113, hanging: QIND + 113 }, tabs: [{ type: TabStopType.LEFT, position: QIND + 113 }], after: 80, keepNext: true }));
+      out.push(P(`Tulis jawabanmu pada ${ljkRef}.`, { italics: true, size: 18, color: "7F7F7F", indent: { left: QIND + 113 }, after: 160 }));
+    });
+  }
+  out.push(P("— Akhir subtes. Periksa kembali jawaban Anda. —", { italics: true, align: AlignmentType.CENTER, size: 19, before: 160, color: "7F7F7F" }));
+  return out;
+}
+const LJK_HINT = "PG: lingkari SATU huruf. MCMA (☐): centang SEMUA huruf yang benar. Benar/Salah: lingkari B atau S untuk setiap pernyataan (nomor pernyataan 1–5).";
+function ljkBlock(s, i) {
+  const out = [P(`Subtes ${i + 1} — ${s.title} (${s.count} soal)`, { bold: true, size: 19, color: NAVY, before: 120, after: 60, keepNext: true })];
+  const qs = s.items.filter((it) => it.q !== undefined);
+  const sheetCell = (it) => it.type === "pg" ? `${it.no}.  (A) (B) (C) (D) (E)` : it.type === "mcma" ? `${it.no}. ☐A ☐B ☐C ☐D ☐E` : `${it.no}. ` + it.s.map((_, j) => `${j + 1}:B/S`).join("  ");
+  const per = 4; const rows = [];
+  const nRows = Math.ceil(qs.length / per);
+  for (let r = 0; r < nRows; r++) {
+    const row = [];
+    for (let c = 0; c < per; c++) { const it = qs[c * nRows + r]; row.push(it ? sheetCell(it) : ""); }
+    rows.push(row);
+  }
+  out.push(table(rows, [2409, 2409, 2410, 2410], { size: 16 }));
+  if (s.essays) {
+    out.push(P(`Lembar Jawaban Uraian — Subtes ${i + 1}`, { bold: true, size: 19, color: NAVY, before: 160, after: 60, keepNext: true }));
+    s.essays.forEach((e, k) => out.push(new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: [W], layout: TableLayoutType.FIXED, rows: [
+      new TableRow({ children: [cell(P(`U${k + 1}. ${e.unit}`, { bold: true, size: 18, after: 0 }), W, { fill: LIGHT })] }),
+      new TableRow({ height: { value: 2000, rule: "atLeast" }, children: [cell(P("", { after: 0 }), W)] }),
+    ] }), spacer(80)));
+  }
+  return out;
+}
+function kunciRingkasBlock(s) {
+  const qs = s.items.filter((it) => it.q !== undefined);
+  const rows = []; for (let r = 0; r < qs.length; r += 6) rows.push(Array.from({ length: 6 }, (_, k) => (qs[r + k] ? `${qs[r + k].no}. ${qs[r + k].keyStr}` : "")));
+  const dist = [0, 0, 0, 0, 0]; qs.filter((q) => q.type === "pg").forEach((q) => dist[q.key]++);
+  return [table(rows, [1606, 1606, 1606, 1606, 1607, 1607], { size: 17, centerAll: true }),
+    P(`Sebaran kunci PG: A = ${dist[0]}, B = ${dist[1]}, C = ${dist[2]}, D = ${dist[3]}, E = ${dist[4]}. MCMA ditulis sebagai himpunan huruf kunci; Benar/Salah ditulis berurutan sesuai nomor pernyataan.`, { size: 16, italics: true, color: "7F7F7F", before: 40 })];
+}
+function pembahasanBlock(s, i) {
+  const out = [];
+  const rows = [["No", "Kunci", "Level", "Materi & kualifikasi internasional", "Pembahasan"]];
+  s.items.forEach((it) => { if (it.q !== undefined) rows.push([String(it.no), it.keyStr, `L${it.l}`, [P(it.t, { size: 16, bold: true, after: 20, line: 240 }), P(`${FORMAT[it.type]} • ${it.c ? "Kontekstual" : "Non-kontekstual"}`, { size: 15, after: 20, line: 240 }), P(`TIMSS: ${TIMSS_SHORT[it.l]} • PISA ≈ ${PISA_LV[it.l]}`, { size: 15, color: BLUE, after: 20, line: 240 }), P(intlTag(s, it), { size: 15, italics: true, color: "595959", after: 0, line: 240 })], it.e]); });
+  out.push(table(rows, [500, 1000, 650, 3300, 4188], { header: true, size: 17, zebra: true }));
+  if (s.essays) {
+    out.push(P(`Pedoman Kode Uraian Subtes ${i + 1} (model coding guide PISA)`, { bold: true, color: NAVY, size: 20, before: 160, after: 80, keepNext: true }));
+    s.essays.forEach((e, k) => {
+      out.push(P([new TextRun({ text: `U${k + 1}. `, bold: true, font: FONT, size: 19 }), ...runs(e.q, { size: 19 })], { after: 40, keepNext: true }));
+      out.push(P(`Kualifikasi: ${e.x.fw} • ${e.x.proc} • ${e.x.fmt} • TIMSS: ${TIMSS_SHORT[e.l]} • PISA ≈ ${PISA_LV[e.l]}`, { size: 16, italics: true, color: BLUE, after: 60, keepNext: true }));
+      out.push(table([["Kode", "Kriteria"], ...e.rubric], [1800, W - 1800], { header: true, size: 17, boldFirstCol: true }));
+      out.push(spacer(100));
+    });
+  }
+  return out;
 }
 
 // ---------- konten analisis ----------
@@ -629,17 +702,7 @@ body.push(H2("2.5 Tata Tertib & Petunjuk Umum Peserta"));
 ].forEach((t) => body.push(numbered(t, "rules")));
 
 body.push(H2("2.6 Kisi-kisi per Subtes"));
-SECTIONS.forEach((s, i) => {
-  body.push(H3(`Subtes ${i + 1}: ${s.title}`));
-  const groups = new Map();
-  s.items.forEach((it) => { if (it.q === undefined) return; if (!groups.has(it.t)) groups.set(it.t, []); groups.get(it.t).push(it); });
-  const rows = [["Materi / Indikator", "No.", "Bentuk", "Level", "Konteks", "Domain TIMSS", "Kualifikasi internasional"]];
-  const uniq = (arr) => [...new Set(arr)].join("/");
-  for (const [t, its] of groups) rows.push([t, its.map((x) => x.no).join(", "), uniq(its.map((x) => FORMAT[x.type])), uniq(its.map((x) => `L${x.l}`)), uniq(its.map((x) => (x.c ? "Ya" : "Tidak"))), uniq(its.map((x) => TIMSS_SHORT[x.l])), uniq(its.map((x) => intlTag(s, x)))]);
-  if (s.essays) s.essays.forEach((e, k) => rows.push([`Uraian – ${e.unit}`, `U${k + 1}`, "Uraian", `L${e.l}`, "Ya", TIMSS_SHORT[e.l], `${e.x.fw} • ${e.x.proc}`]));
-  body.push(table(rows, [2300, 800, 1150, 650, 800, 1100, 2838], { header: true, size: 15, zebra: true }));
-  body.push(spacer(120));
-});
+SECTIONS.forEach((s, i) => { body.push(H3(`Subtes ${i + 1}: ${s.title}`)); body.push(...kisiBlock(s), spacer(120)); });
 
 // BAGIAN III — Naskah Soal
 body.push(H1("Bagian III — Naskah Soal"));
@@ -650,20 +713,7 @@ body.push(box([
 SECTIONS.forEach((s, i) => {
   if (i > 0) body.push(new Paragraph({ children: [new PageBreak()] }));
   else body.push(spacer(200));
-  body.push(...sectionHeader(s, i + 1));
-  s.items.forEach((it) => {
-    if (it.part) body.push(P(it.part, { bold: true, color: BLUE, size: 21, before: 120, after: 100, keepNext: true }));
-    else if (it.stim) body.push(...renderStim(it, s));
-    else body.push(...renderQuestion(it));
-  });
-  if (s.essays) {
-    body.push(P("Bagian B — Uraian (respons terbuka model PISA)", { bold: true, color: BLUE, size: 21, before: 160, after: 100, keepNext: true }));
-    s.essays.forEach((e, k) => {
-      body.push(P([new TextRun({ text: `U${k + 1}.\t`, bold: true, font: FONT, size: 22 }), new TextRun({ text: `[${e.unit}] `, italics: true, font: FONT, size: 20, color: BLUE }), ...runs(e.q)], { indent: { left: QIND + 113, hanging: QIND + 113 }, tabs: [{ type: TabStopType.LEFT, position: QIND + 113 }], after: 80, keepNext: true }));
-      body.push(P("Tulis jawabanmu pada Lembar Jawaban Uraian (Bagian V).", { italics: true, size: 18, color: "7F7F7F", indent: { left: QIND + 113 }, after: 160 }));
-    });
-  }
-  body.push(P("— Akhir subtes. Periksa kembali jawaban Anda. —", { italics: true, align: AlignmentType.CENTER, size: 19, before: 160, color: "7F7F7F" }));
+  body.push(...naskahBlock(s, i, "Lembar Jawaban Uraian (Bagian V)"));
 });
 
 // BAGIAN IV — Non-kognitif
@@ -697,57 +747,17 @@ body.push(P("Nilai wawancara = (jumlah skor ÷ 20) × 100.", { size: 19, before:
 // BAGIAN V — Lembar Jawaban
 body.push(H1("Bagian V — Lembar Jawaban"));
 body.push(table([["Nama", "", "No. Peserta", ""], ["Asal Sekolah", "", "Sekolah Tujuan", ""]], [1600, 3219, 1600, 3219], { size: 19, firstColFill: false }));
-body.push(P("PG: lingkari SATU huruf. MCMA (☐): centang SEMUA huruf yang benar. Benar/Salah: lingkari B atau S untuk setiap pernyataan (nomor pernyataan 1–5).", { size: 18, italics: true, before: 80 }));
-SECTIONS.forEach((s, i) => {
-  body.push(P(`Subtes ${i + 1} — ${s.title} (${s.count} soal)`, { bold: true, size: 19, color: NAVY, before: 120, after: 60, keepNext: true }));
-  const qs = s.items.filter((it) => it.q !== undefined);
-  const sheetCell = (it) => it.type === "pg" ? `${it.no}.  (A) (B) (C) (D) (E)` : it.type === "mcma" ? `${it.no}. ☐A ☐B ☐C ☐D ☐E` : `${it.no}. ` + it.s.map((_, j) => `${j + 1}:B/S`).join("  ");
-  const per = 4; const rows = [];
-  const nRows = Math.ceil(qs.length / per);
-  for (let r = 0; r < nRows; r++) {
-    const row = [];
-    for (let c = 0; c < per; c++) { const it = qs[c * nRows + r]; row.push(it ? sheetCell(it) : ""); }
-    rows.push(row);
-  }
-  body.push(table(rows, [2409, 2409, 2410, 2410], { size: 16 }));
-  if (s.essays) {
-    body.push(P(`Lembar Jawaban Uraian — Subtes ${i + 1}`, { bold: true, size: 19, color: NAVY, before: 160, after: 60, keepNext: true }));
-    s.essays.forEach((e, k) => body.push(new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: [W], layout: TableLayoutType.FIXED, rows: [
-      new TableRow({ children: [cell(P(`U${k + 1}. ${e.unit}`, { bold: true, size: 18, after: 0 }), W, { fill: LIGHT })] }),
-      new TableRow({ height: { value: 2000, rule: "atLeast" }, children: [cell(P("", { after: 0 }), W)] }),
-    ] }), spacer(80)));
-  }
-});
+body.push(P(LJK_HINT, { size: 18, italics: true, before: 80 }));
+SECTIONS.forEach((s, i) => body.push(...ljkBlock(s, i)));
 
 // BAGIAN VI — Kunci & Pembahasan
 body.push(H1("Bagian VI — Kunci Jawaban & Pembahasan"));
 body.push(box([P("DOKUMEN PENILAI — jangan dibagikan kepada peserta sebelum tryout selesai.", { bold: true, color: "C00000", after: 0, align: AlignmentType.CENTER })], "FDECEC"));
 body.push(spacer(120));
 body.push(H2("6.1 Kunci Jawaban Ringkas"));
-SECTIONS.forEach((s, i) => {
-  body.push(P(`Subtes ${i + 1} — ${s.title}`, { bold: true, size: 19, color: NAVY, before: 100, after: 40, keepNext: true }));
-  const qs = s.items.filter((it) => it.q !== undefined);
-  const rows = []; for (let r = 0; r < qs.length; r += 6) rows.push(Array.from({ length: 6 }, (_, k) => (qs[r + k] ? `${qs[r + k].no}. ${qs[r + k].keyStr}` : "")));
-  body.push(table(rows, [1606, 1606, 1606, 1606, 1607, 1607], { size: 17, centerAll: true }));
-  const dist = [0, 0, 0, 0, 0]; qs.filter((q) => q.type === "pg").forEach((q) => dist[q.key]++);
-  body.push(P(`Sebaran kunci PG: A = ${dist[0]}, B = ${dist[1]}, C = ${dist[2]}, D = ${dist[3]}, E = ${dist[4]}. MCMA ditulis sebagai himpunan huruf kunci; Benar/Salah ditulis berurutan sesuai nomor pernyataan.`, { size: 16, italics: true, color: "7F7F7F", before: 40 }));
-});
+SECTIONS.forEach((s, i) => { body.push(P(`Subtes ${i + 1} — ${s.title}`, { bold: true, size: 19, color: NAVY, before: 100, after: 40, keepNext: true })); body.push(...kunciRingkasBlock(s)); });
 body.push(H2("6.2 Pembahasan Lengkap"));
-SECTIONS.forEach((s, i) => {
-  body.push(H3(`Subtes ${i + 1}: ${s.title}`));
-  const rows = [["No", "Kunci", "Level", "Materi & kualifikasi internasional", "Pembahasan"]];
-  s.items.forEach((it) => { if (it.q !== undefined) rows.push([String(it.no), it.keyStr, `L${it.l}`, [P(it.t, { size: 16, bold: true, after: 20, line: 240 }), P(`${FORMAT[it.type]} • ${it.c ? "Kontekstual" : "Non-kontekstual"}`, { size: 15, after: 20, line: 240 }), P(`TIMSS: ${TIMSS_SHORT[it.l]} • PISA ≈ ${PISA_LV[it.l]}`, { size: 15, color: BLUE, after: 20, line: 240 }), P(intlTag(s, it), { size: 15, italics: true, color: "595959", after: 0, line: 240 })], it.e]); });
-  body.push(table(rows, [500, 1000, 650, 3300, 4188], { header: true, size: 17, zebra: true }));
-  if (s.essays) {
-    body.push(P(`Pedoman Kode Uraian Subtes ${i + 1} (model coding guide PISA)`, { bold: true, color: NAVY, size: 20, before: 160, after: 80, keepNext: true }));
-    s.essays.forEach((e, k) => {
-      body.push(P([new TextRun({ text: `U${k + 1}. `, bold: true, font: FONT, size: 19 }), ...runs(e.q, { size: 19 })], { after: 40, keepNext: true }));
-      body.push(P(`Kualifikasi: ${e.x.fw} • ${e.x.proc} • ${e.x.fmt} • TIMSS: ${TIMSS_SHORT[e.l]} • PISA ≈ ${PISA_LV[e.l]}`, { size: 16, italics: true, color: BLUE, after: 60, keepNext: true }));
-      body.push(table([["Kode", "Kriteria"], ...e.rubric], [1800, W - 1800], { header: true, size: 17, boldFirstCol: true }));
-      body.push(spacer(100));
-    });
-  }
-});
+SECTIONS.forEach((s, i) => { body.push(H3(`Subtes ${i + 1}: ${s.title}`)); body.push(...pembahasanBlock(s, i)); });
 
 // BAGIAN VII — Penskoran
 body.push(H1("Bagian VII — Pedoman Penskoran, Interpretasi & Analisis Hasil"));
@@ -818,9 +828,10 @@ body.push(P("Sumber diakses November 2026. Informasi resmi terbaru tetap mengacu
 SOURCES.forEach(([t, u], i) => body.push(P([new TextRun({ text: `${i + 1}. ${t}. `, font: FONT, size: 19 }), new TextRun({ text: u, font: FONT, size: 17, color: BLUE })], { indent: { left: 397, hanging: 397 }, after: 70 })));
 
 // ---------- dokumen ----------
-const doc = new Document({
+function makeDoc(children, docTitle, headerText) {
+  return new Document({
   creator: "Tim Penyusun Tryout",
-  title: "Tryout 1 Seleksi Masuk SMA/MA Unggulan TP 2027/2028",
+  title: docTitle,
   description: "Paket tryout komposit MAN IC, SMA Labschool, SMANU MH Thamrin, SMA Al Azhar",
   styles: {
     default: { document: { run: { font: FONT, size: 22 } } },
@@ -843,15 +854,17 @@ const doc = new Document({
     properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134, header: 567, footer: 567 } }, titlePage: true },
     headers: {
       first: new Header({ children: [] }),
-      default: new Header({ children: [P([new TextRun({ text: "Tryout 1 · Seleksi Masuk SMA/MA Unggulan TP 2027/2028", font: FONT, size: 16, color: "7F7F7F" })], { align: AlignmentType.RIGHT, after: 0 })] }),
+      default: new Header({ children: [P([new TextRun({ text: headerText, font: FONT, size: 16, color: "7F7F7F" })], { align: AlignmentType.RIGHT, after: 0 })] }),
     },
     footers: {
       first: new Footer({ children: [] }),
       default: new Footer({ children: [P([new TextRun({ children: ["Halaman ", PageNumber.CURRENT, " dari ", PageNumber.TOTAL_PAGES], font: FONT, size: 16, color: "7F7F7F" })], { align: AlignmentType.CENTER, after: 0 })] }),
     },
-    children: body,
+    children,
   }],
-});
+  });
+}
+const doc = makeDoc(body, "Tryout 1 Seleksi Masuk SMA/MA Unggulan TP 2027/2028", "Tryout 1 · Seleksi Masuk SMA/MA Unggulan TP 2027/2028");
 
 const OUT = path.join(__dirname, "..", "Tryout1_Seleksi_SMA_Unggulan_TP2027-2028.docx");
 Packer.toBuffer(doc).then((buf) => {
@@ -860,3 +873,80 @@ Packer.toBuffer(doc).then((buf) => {
   SECTIONS.forEach((s) => { const d = [0, 0, 0, 0, 0]; s.items.forEach((it) => { if (it.type === "pg") d[it.key]++; }); console.log(s.id, s.count, "butir; kunci PG A/B/C/D/E =", d.join("/"), "| MCMA", s.items.filter((it) => it.type === "mcma").length, "| B/S", s.items.filter((it) => it.type === "bs").length); });
   console.log("Total butir:", TOTAL_ITEMS, "| Total waktu:", TOTAL_TIME, "menit");
 });
+
+// ---------- dokumen per mapel/subtes ----------
+// Untuk setiap subtes: (1) Naskah Soal + Lembar Jawaban (untuk peserta), (2) Kunci, Pembahasan, Kisi-kisi & Pedoman Skor (untuk guru).
+const PER_DIR = path.join(__dirname, "..", "Soal_per_Mapel");
+const SLUG = { TPA: "01_TPA", BIN: "02_Bahasa_Indonesia", MAT: "03_Matematika", IPA: "04_IPA", ING: "05_Bahasa_Inggris", IPS: "06_IPS", PAI: "07_PAI", ARB: "08_Bahasa_Arab", INT: "09_Literasi_Internasional_PISA" };
+const HDR = "Tryout 1 · Seleksi Masuk SMA/MA Unggulan TP 2027/2028";
+
+function infoTable(s) {
+  const r = STATS[s.id];
+  const isi = `${s.count} soal objektif (PG ${r.cnt.pg}, PG Kompleks/MCMA ${r.cnt.mcma}, Benar/Salah ${r.cnt.bs})` + (s.essays ? ` + ${s.essays.length} soal uraian` : "");
+  return table([
+    ["Waktu", `${s.time} menit`],
+    ["Jumlah soal", isi],
+    ["Karakter soal", `${r.pct(r.ctx)}% kontekstual • ${r.pct(r.l3)}% level analisis/penalaran (L3) • setiap PG/MCMA 5 opsi`],
+    ["Relevansi seleksi", s.relevance],
+  ], [2400, W - 2400], { firstColFill: true, boldFirstCol: true, size: 19 });
+}
+function coverMapel(s, i, kind) {
+  return [
+    spacer(900),
+    P("TRYOUT 1 · SELEKSI MASUK SMA/MA UNGGULAN", { bold: true, size: 24, color: BLUE, align: AlignmentType.CENTER, after: 60 }),
+    P("Tahun Pelajaran 2027/2028", { size: 22, color: NAVY, align: AlignmentType.CENTER, after: 360 }),
+    P(kind, { bold: true, size: 40, color: NAVY, align: AlignmentType.CENTER, after: 120 }),
+    P(`Subtes ${i + 1}: ${s.title}`, { bold: true, size: 30, color: NAVY, align: AlignmentType.CENTER, after: 480 }),
+    infoTable(s),
+    spacer(300),
+  ];
+}
+const MAPEL_RULES = [
+  "Tulis identitas pada lembar jawaban sebelum mulai mengerjakan.",
+  "Soal PG: pilih SATU jawaban paling tepat dari lima pilihan (A–E).",
+  "Soal PG Kompleks (MCMA), bertanda “pilih SEMUA jawaban yang benar”: jawaban benar lebih dari satu; tandai setiap pilihan yang benar.",
+  "Soal Benar/Salah: tentukan Benar (B) atau Salah (S) untuk setiap pernyataan.",
+  "Setiap soal bernilai 1 bila dijawab tepat seluruhnya; jawaban salah, tidak lengkap, atau kosong bernilai 0 (tanpa pengurangan).",
+  "Kalkulator, gawai, dan catatan tidak diperkenankan. Gunakan kertas coretan yang disediakan.",
+];
+const identitas = () => table([["Nama", "", "No. Peserta", ""], ["Asal Sekolah", "", "Sekolah Tujuan", ""]], [1600, 3219, 1600, 3219], { size: 19 });
+
+function soalDoc(s, i) {
+  const ch = [...coverMapel(s, i, "NASKAH SOAL")];
+  ch.push(P("IDENTITAS PESERTA", { bold: true, size: 22, color: NAVY, after: 80 }), identitas(), spacer(200));
+  ch.push(box([P("PETUNJUK PENGERJAAN", { bold: true, color: NAVY, after: 60 }), ...MAPEL_RULES.map((t) => bullet(t, 0, { size: 19, after: 30 })),
+    ...(s.essays ? [bullet(`Soal uraian dinilai dengan kode 2 (penuh), 1 (sebagian), atau 0; tulis jawaban lengkap dan runtut pada lembar jawaban uraian.`, 0, { size: 19, after: 30 })] : [])]));
+  ch.push(new Paragraph({ children: [new PageBreak()] }));
+  ch.push(...naskahBlock(s, i, "Lembar Jawaban Uraian di akhir naskah ini"));
+  ch.push(H1("Lembar Jawaban"), identitas(), P(LJK_HINT, { size: 18, italics: true, before: 80 }), ...ljkBlock(s, i));
+  return makeDoc(ch, `Naskah Soal Subtes ${i + 1} – ${s.title}`, `${HDR} · Naskah Soal Subtes ${i + 1}`);
+}
+function kunciDoc(s, i) {
+  const ch = [...coverMapel(s, i, "KUNCI JAWABAN & PEMBAHASAN")];
+  ch.push(box([P("DOKUMEN PENILAI — jangan dibagikan kepada peserta sebelum tryout selesai.", { bold: true, color: "C00000", after: 0, align: AlignmentType.CENTER })], "FDECEC"));
+  ch.push(H1("A. Kunci Jawaban Ringkas"), ...kunciRingkasBlock(s));
+  ch.push(H2("B. Pedoman Penskoran"));
+  [
+    "PG: skor 1 bila memilih kunci.",
+    "PG Kompleks (MCMA): skor 1 hanya bila semua kunci dipilih dan tidak ada opsi salah yang dipilih.",
+    "Benar/Salah: skor 1 hanya bila seluruh pernyataan dijawab tepat.",
+    "Skor parsial (opsional, untuk diagnosis): MCMA = (kunci terpilih − opsi salah terpilih) ÷ jumlah kunci, minimal 0; Benar/Salah = proporsi pernyataan yang tepat.",
+    s.essays ? `Nilai subtes = (skor objektif + jumlah kode uraian) ÷ ${s.count + s.essays.length * 2} × 100 (skor objektif maks. ${s.count}, uraian maks. ${s.essays.length * 2}).` : `Nilai subtes = (jumlah skor ÷ ${s.count}) × 100.`,
+  ].forEach((t) => ch.push(bullet(t, 0, { size: 20 })));
+  const l = (x) => s.items.filter((it) => it.q !== undefined && it.l === x).length;
+  ch.push(spacer(80), table([["Komponen", "Jumlah butir", "Skor peserta", "Catatan"],
+    ["Butir L1–L2 (jangkar konsep)", String(l(1) + l(2)), "", ""],
+    ["Butir L3 (analisis/penalaran)", String(l(3)), "", "Dasar estimasi setara level PISA"],
+    ...(s.essays ? [["Uraian (kode 0–2)", String(s.essays.length), "", `Maks. ${s.essays.length * 2}`]] : []),
+    ["Nilai subtes (0–100)", "", "", ""]], [3400, 1600, 1800, 2838], { header: true, size: 18 }));
+  ch.push(H1("C. Pembahasan Lengkap"), ...pembahasanBlock(s, i));
+  ch.push(H1("D. Kisi-kisi Subtes"), ...kisiBlock(s));
+  return makeDoc(ch, `Kunci & Pembahasan Subtes ${i + 1} – ${s.title}`, `${HDR} · Kunci Subtes ${i + 1} (Dokumen Penilai)`);
+}
+
+fs.mkdirSync(PER_DIR, { recursive: true });
+Promise.all(SECTIONS.flatMap((s, i) => [
+  [soalDoc(s, i), `${SLUG[s.id]}_Soal.docx`],
+  [kunciDoc(s, i), `${SLUG[s.id]}_Kunci_Pembahasan.docx`],
+]).map(([d, name]) => Packer.toBuffer(d).then((buf) => { fs.writeFileSync(path.join(PER_DIR, name), buf); return name; })))
+  .then((names) => console.log(`Per mapel: ${names.length} file di ${PER_DIR}`));

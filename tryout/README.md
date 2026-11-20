@@ -3,7 +3,8 @@
 Paket tryout komposit untuk MAN Insan Cendekia, SMA Labschool UNJ, SMAN Unggulan M.H. Thamrin, dan SMA Islam Al Azhar,
 dikualifikasi terhadap standar internasional PISA 2025 dan TIMSS 2023.
 
-- Dokumen siap pakai: `../Tryout1_Seleksi_SMA_Unggulan_TP2027-2028.docx`
+- Dokumen siap pakai: `../Tryout1_Seleksi_SMA_Unggulan_TP2027-2028.docx` (paket lengkap)
+- Dokumen per mapel/subtes: `../Soal_per_Mapel/` (juga `../Soal_per_Mapel_Tryout1.zip`) — untuk setiap subtes ada `NN_<Mapel>_Soal.docx` (naskah + lembar jawaban, untuk peserta) dan `NN_<Mapel>_Kunci_Pembahasan.docx` (kunci, pedoman skor, pembahasan, kisi-kisi; dokumen penilai).
 - Bank soal (dapat diedit): `data/*.js` — `o[0]` selalu jawaban benar; posisi kunci diacak dan diseimbangkan saat build.
   - `data/intl.js`: Subtes 9, unit model PISA/TIMSS (pilihan ganda + uraian dengan pedoman kode).
   - Kualifikasi internasional butir lain dihitung oleh `intlTag()` di `build.js`.
